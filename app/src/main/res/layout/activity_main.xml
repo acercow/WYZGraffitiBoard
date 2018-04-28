@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <com.bfc.wyzgraffitiboard.View.GraffitiBoardView
+    <com.bfc.wyzgraffitiboard.view.GraffitiBoardView
         android:id="@+id/graffiti_board"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
