@@ -118,7 +118,7 @@ public class GraffitiBoardView extends View {
 //                mPath.moveTo(pointX, pointY);
                 tempX = pointX;
                 tempY = pointY;
-                mCanvas.drawBitmap(mGiftIcon, pointX - mGiftIcon.getWidth(), pointY - mGiftIcon.getHeight(), null);
+                mCanvas.drawBitmap(mGiftIcon, pointX - mGiftIcon.getWidth() / 2, pointY - mGiftIcon.getHeight() / 2, null);
                 return true;
             case MotionEvent.ACTION_MOVE:
 //                mPath.lineTo(pointX, pointY);
@@ -145,7 +145,7 @@ public class GraffitiBoardView extends View {
                     float gapX = (pointX - tempX) / ratio;
                     float gapY = (pointY - tempY) / ratio;
                     for (int i = 1; i <= ratio; i++) {
-                        mCanvas.drawBitmap(mGiftIcon, tempX + gapX - mGiftIcon.getWidth(), tempY + gapY - mGiftIcon.getHeight(), null);
+                        mCanvas.drawBitmap(mGiftIcon, tempX + gapX - mGiftIcon.getWidth() / 2, tempY + gapY - mGiftIcon.getHeight() / 2, null);
                         tempX = tempX + gapX;
                         tempY = tempY + gapY;
                     }
