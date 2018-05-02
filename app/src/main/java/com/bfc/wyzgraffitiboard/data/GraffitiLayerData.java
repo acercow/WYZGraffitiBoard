@@ -1,37 +1,50 @@
 package com.bfc.wyzgraffitiboard.data;
 
 import com.bfc.wyzgraffitiboard.R;
+import com.bfc.wyzgraffitiboard.animation.AbstractBaseAnimator;
+import com.bfc.wyzgraffitiboard.animation.AnimatorFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Created by fishyu on 2018/4/28.
+ * <p>
+ * 我们通过相对比例来存储理解所有的信息，在绘制的时候，通过 坐标转换 系统来得到具体的值
  */
 
 public class GraffitiLayerData {
 
-    public static final boolean mOptimizeAnimation = true;
+    public static final int MASK_REDRAW = 0x00000011;
 
-    public String id; //礼物id
+    public static final int FLAG_REDRAW_ALL = 0x1 << 0;
+    public static final int FLAG_REDRAW_ONCE = 0x1 << 1;
+
+
+    public float mWidth = 100.0f; //画布宽度
+    public float mHeight = 100.0f; //画布高度
+
+    private int mFlag = 0;
+
+    private String id; //礼物id
 
     public int mType; // 0手绘 1图片 2其他
-
-    public boolean mAnimation; // 是否有动画
 
     public int mCount; //总数
 
     public String mExtra;
 
-
-    public float mWidth = 100.0f; //画布宽度
-    public float mHegith = 100.0f; //画布高度
-
     public int mIconRes = R.drawable.shield_icon;
 
+    public List<GraffitiNoteData> mNotes = new ArrayList<>();
 
-    public List<GraffitiNote> mNotes = new ArrayList<>();
+    private int mAnimation = AnimatorFactory.SCALE;
 
+    public AbstractBaseAnimator mAnimator; // 是否有动画
+
+    public GraffitiLayerData() {
+
+    }
 
     /**
      * Total points
@@ -43,7 +56,7 @@ public class GraffitiLayerData {
     }
 
 
-    public List<GraffitiNote> getNotes() {
+    public List<GraffitiNoteData> getNotes() {
         return mNotes;
     }
 
@@ -56,61 +69,60 @@ public class GraffitiLayerData {
      *
      * @return
      */
-    public GraffitiNote getLast() {
+    public GraffitiNoteData getLast() {
         if (getCount() > 0) {
             return mNotes.get(mNotes.size() - 1);
         }
         return null;
     }
 
-
     public float getWidth() {
         return mWidth;
     }
 
     public float getHeight() {
-        return mHegith;
+        return mHeight;
     }
 
+    public float getNoteWidth() {
+        return 10;
+    }
+
+    public float getNoteHeight() {
+        return 10;
+    }
 
     public boolean mergeAble() {
-        return mAnimation && mOptimizeAnimation;
+        return !hasAnimation();
     }
 
-    public static class GraffitiNote {
-
-        public float mX;
-        public float mY;
-
-        /**
-         * 是否渲染
-         */
-        public boolean mDrawn = false;
-
-
-        public GraffitiNote(float x, float y) {
-            mX = x;
-            mY = y;
-            mDrawn = false;
-        }
-
+    public boolean hasAnimation() {
+        return mAnimation > 0;
     }
 
+    public void installAnimator(AbstractBaseAnimator animator) {
+        mAnimator = animator;
+        setFlag(MASK_REDRAW, FLAG_REDRAW_ALL | ~FLAG_REDRAW_ONCE);
+    }
 
-    public void addNote(GraffitiNote note) {
+    public void uninstallAnimator() {
+        mAnimator = null;
+        setFlag(MASK_REDRAW, FLAG_REDRAW_ALL | FLAG_REDRAW_ONCE);
+    }
+
+    public void addNote(GraffitiNoteData note) {
         if (note == null || mNotes.contains(note)) {
             return;
         }
         mNotes.add(note);
     }
 
-
     /**
      * Add notes for once
      *
      * @param notes
      */
-    public boolean addNote(List<GraffitiNote> notes) {
+    public boolean addNote(List<GraffitiNoteData> notes) {
         if (notes == null || notes.size() < 0) {
             return false;
         }
@@ -121,6 +133,32 @@ public class GraffitiLayerData {
 
     public static GraffitiLayerData generateDefault() {
         return new GraffitiLayerData();
+    }
+
+
+    public boolean isForceDrawAll() {
+        return (mFlag & FLAG_REDRAW_ALL) == 1;
+    }
+
+    /**
+     * Force draw all
+     * <p>
+     * See {@link #FLAG_REDRAW_ONCE}, {@link #FLAG_REDRAW_ALL}
+     *
+     * @param mask
+     * @param flag
+     */
+    public void setFlag(int mask, int flag) {
+        mFlag = (mFlag & ~mask) | flag;
+    }
+
+    /**
+     * Finish draw all
+     */
+    public void finishForceDrawAll(boolean forceFinish) {
+        if ((mFlag & FLAG_REDRAW_ONCE) == 1 || forceFinish) {
+            setFlag(MASK_REDRAW, ~FLAG_REDRAW_ALL | ~FLAG_REDRAW_ONCE);
+        }
     }
 
 

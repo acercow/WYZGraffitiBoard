@@ -1,5 +1,7 @@
 package com.bfc.wyzgraffitiboard.coordinates;
 
+import android.graphics.RectF;
+
 /**
  * Created by fishyu on 2018/4/28.
  * <p>
@@ -12,30 +14,12 @@ public interface ICoordinateConverter {
 
 
     /**
-     * 转 宽度
+     * Convert value to computer pixel level
      *
-     * @param width
+     * @param from
+     * @param to
      * @return
      */
-    int width(float width);
-
-
-    /**
-     * 转 高度
-     *
-     * @param height
-     * @return
-     */
-    int height(float height);
-
-
-    /**
-     * 转 坐标
-     *
-     * @param value
-     * @return
-     */
-    int coordinate(float value);
-
+    RectF convert(RectF from, RectF to);
 
 }

@@ -15,15 +15,11 @@ import com.bfc.wyzgraffitiboard.data.GraffitiLayerData;
  */
 public class GrafittiView extends ViewGroup {
 
-
-
-    private InternalTouchEventHandler mInternalTouchEvent;
     private INextNoteCalculator mNoteCalculator;
 
     private GraffitiData mGraffitiData;
 
     private GraffitiLayerData mDrawingLayer;
-
 
     public GrafittiView(Context context) {
         super(context);
@@ -44,7 +40,6 @@ public class GrafittiView extends ViewGroup {
      * @param initData
      */
     public void init(GraffitiData initData) {
-        mInternalTouchEvent = new InternalTouchEventHandler();
         mNoteCalculator = new SimpleNextNoteCalculator();
         mGraffitiData = GraffitiData.generateDefault();
 
@@ -64,12 +59,38 @@ public class GrafittiView extends ViewGroup {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
     }
 
+    /**
+     * 1, Update data <br>
+     * 2, Notify view updating
+     */
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (mInternalTouchEvent != null && mInternalTouchEvent.onTouchEvent(event)) {
-            return true;
+        final float pointX = event.getX();
+        final float pointY = event.getY();
+        // Checks for the event that occurs
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                if (mDrawingLayer != null) {
+                    throw new RuntimeException("How could mDrawingLayer not be null !");
+                }
+                mDrawingLayer = mGraffitiData.getDrawingLayer();
+                mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, null, pointX, pointY));
+                notifyDataChanged(mDrawingLayer);
+                return true;
+            case MotionEvent.ACTION_MOVE:
+                mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY));
+                notifyDataChanged(mDrawingLayer);
+                return true;
+
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL:
+                notifyDataChanged(mDrawingLayer);
+                mDrawingLayer = null;
+                return true;
+
+            default:
+                return true;
         }
-        return super.onTouchEvent(event);
     }
 
     @Override
@@ -80,50 +101,6 @@ public class GrafittiView extends ViewGroup {
             child.layout(l, t, r, b);
         }
     }
-
-    /**
-     * 1, Update data <br>
-     * 2, Notify view updating
-     */
-    class InternalTouchEventHandler {
-
-        /**
-         * do what u want to handler data
-         *
-         * @param event
-         * @return
-         */
-        public boolean onTouchEvent(MotionEvent event) {
-            final float pointX = event.getX();
-            final float pointY = event.getY();
-            // Checks for the event that occurs
-            switch (event.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    if (mDrawingLayer != null) {
-                        throw new RuntimeException("How could mDrawingLayer not be null !");
-                    }
-                    mDrawingLayer = mGraffitiData.getDrawingLayer();
-                    mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, null, pointX, pointY));
-                    notifyDataChanged(mDrawingLayer);
-                    return true;
-                case MotionEvent.ACTION_MOVE:
-                    mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY));
-                    notifyDataChanged(mDrawingLayer);
-                    return true;
-
-                case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL:
-                    notifyDataChanged(mDrawingLayer);
-                    mDrawingLayer = null;
-                    break;
-
-                default:
-                    return false;
-            }
-            return true;
-        }
-    }
-
 
     /**
      * @param data
@@ -141,7 +118,7 @@ public class GrafittiView extends ViewGroup {
             view.setTag(layerData);
             addView(view);
         } else {
-            view.invalidate();
+            view.notifyDataChanged();
         }
     }
 

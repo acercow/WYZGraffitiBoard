@@ -8,29 +8,26 @@ import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.RectF;
 import android.graphics.Shader;
 import android.view.View;
 
+import com.bfc.wyzgraffitiboard.animation.AbstractBaseAnimator;
+import com.bfc.wyzgraffitiboard.animation.AnimatorFactory;
+import com.bfc.wyzgraffitiboard.coordinates.ICoordinateConverter;
+import com.bfc.wyzgraffitiboard.coordinates.SimpleCoordinateConverter;
 import com.bfc.wyzgraffitiboard.data.GraffitiLayerData;
+import com.bfc.wyzgraffitiboard.data.GraffitiNoteData;
 
 /**
  * Created by fishyu on 2018/4/28.
  * <p>
  * 图层绘制
  * <p>
- * TODO
- * 1，坐标系统
- * 2，动画系统
  */
-class GraffitiLayerView extends View {
+public class GraffitiLayerView extends View {
 
-    static final boolean OPTIMIZE_CHECK_DATA = false;
-
-    public static final int MASK_REDRAW_ALL = 0x1 << 0;
-
-    private int mTag = 0;
-
-    private boolean mAllowMerge = true;
+    private ICoordinateConverter mCoordinateConverter;
 
     private Path mPath;
     private Paint mPaint;
@@ -45,6 +42,10 @@ class GraffitiLayerView extends View {
         initDrawParams();
         setTag(data);
         mGiftIcon = BitmapFactory.decodeResource(getResources(), data.mIconRes);
+
+        if (getLayerData().hasAnimation()) {
+            mAnimator = AnimatorFactory.create(getLayerData(), this);
+        }
     }
 
 
@@ -70,57 +71,91 @@ class GraffitiLayerView extends View {
     }
 
 
-    protected boolean isForceDrawAll() {
-        return (mTag & MASK_REDRAW_ALL) == 0;
-    }
-
     /**
-     * Force draw all
+     * Update view
      */
-    public void forceDrawAll() {
-        mTag |= MASK_REDRAW_ALL;
+    public void notifyDataChanged() {
         invalidate();
     }
 
 
     @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        if (w != oldw || h != oldh) {
+            mCoordinateConverter = new SimpleCoordinateConverter(getLayerData(), this);
+        }
+    }
+
+
+    private AbstractBaseAnimator mAnimator;
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        if (mAnimator != null) {
+            mAnimator.start();
+        }
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        if (mAnimator != null) {
+            mAnimator.stop();
+        }
+    }
+
+    private int mBlankCanvas = -1;
+
+    @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        if (isForceDrawAll()) {
+        if (mBlankCanvas <= 0) {
+            mBlankCanvas = canvas.save();
+        }
+
+        if (getLayerData().isForceDrawAll()) {
             //TODO clean the canvas ??
+            canvas.restoreToCount(mBlankCanvas);
         }
 
         int size = getLayerData().getCount();
         for (int i = size - 1; i >= 0; i--) {
-            GraffitiLayerData.GraffitiNote note = getLayerData().getNotes().get(i);
-            if (note.mDrawn && !isForceDrawAll()) {
+            GraffitiNoteData note = getLayerData().getNotes().get(i);
+            if (note.mDrawn && !getLayerData().isForceDrawAll()) {
                 return;
             }
             note.mDrawn = true;
-            drawNote(canvas, note);
+            onDrawNote(canvas, note, mCoordinateConverter.convert(note.getCalculateRectF(), null));
         }
+
+        //if force draw all, reset it's status
+        getLayerData().finishForceDrawAll(false);
     }
 
     /**
-     * Draw note
+     * Called when draw your note
      *
      * @param canvas
+     * @param note   Note information
      */
-    protected void drawNote(Canvas canvas, GraffitiLayerData.GraffitiNote note) {
+    protected void onDrawNote(Canvas canvas, GraffitiNoteData note, RectF rectF) {
         // shall we have a better plan ?
-        mCanvas.drawBitmap(mGiftIcon, note.mX, note.mY, null);
 
-        float proportion = (float) canvas.getHeight() / mBitmap.getHeight();
-        if (proportion < 1) {
-            mProportion = proportion;
-            mMatrix.reset();
-            mMatrix.postScale(proportion, proportion);
-            mMatrix.postTranslate((canvas.getWidth() - mBitmap.getWidth() * proportion) / 2, 0);
-            canvas.drawBitmap(mBitmap, mMatrix, mPaint);
-        } else {
-            mProportion = 0;
-            canvas.drawBitmap(mBitmap, 0, 0, mPaint);
-        }
+        mCanvas.drawBitmap(mGiftIcon, null, rectF, null);
+
+//        float proportion = (float) canvas.getHeight() / mBitmap.getHeight();
+//        if (proportion < 1) {
+//            mProportion = proportion;
+//            mMatrix.reset();
+//            mMatrix.postScale(proportion, proportion);
+//            mMatrix.postTranslate((canvas.getWidth() - mBitmap.getWidth() * proportion) / 2, 0);
+//            canvas.drawBitmap(mBitmap, mMatrix, mPaint);
+//        } else {
+//            mProportion = 0;
+//            canvas.drawBitmap(mBitmap, 0, 0, mPaint);
+//        }
     }
 
 
