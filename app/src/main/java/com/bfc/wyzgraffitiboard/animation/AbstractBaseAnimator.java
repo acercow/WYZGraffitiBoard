@@ -6,7 +6,7 @@ import android.animation.ValueAnimator;
 import android.graphics.RectF;
 
 import com.bfc.wyzgraffitiboard.data.GraffitiLayerData;
-import com.bfc.wyzgraffitiboard.view.GraffitiLayerView;
+import com.bfc.wyzgraffitiboard.view.test.GraffitiLayerLogicView;
 
 /**
  * Created by fishyu on 2018/5/2.
@@ -14,7 +14,7 @@ import com.bfc.wyzgraffitiboard.view.GraffitiLayerView;
 
 public abstract class AbstractBaseAnimator implements Animator.AnimatorListener, ValueAnimator.AnimatorUpdateListener {
 
-    protected GraffitiLayerView mLayerView;
+    protected GraffitiLayerLogicView mLayerView;
     protected GraffitiLayerData mLayerData;
 
     private ObjectAnimator mAnimator;
@@ -25,7 +25,7 @@ public abstract class AbstractBaseAnimator implements Animator.AnimatorListener,
 
     private long mLastUpdateTime = 0;
 
-    public AbstractBaseAnimator(GraffitiLayerData data, GraffitiLayerView view, long duration, float from, float to) {
+    public AbstractBaseAnimator(GraffitiLayerData data, GraffitiLayerLogicView view, long duration, float from, float to) {
         mLayerData = data;
         mLayerView = view;
 

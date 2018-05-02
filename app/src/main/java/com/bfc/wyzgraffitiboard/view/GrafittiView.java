@@ -40,11 +40,12 @@ public class GrafittiView extends ViewGroup {
      * @param initData
      */
     public void init(GraffitiData initData) {
+        if (initData == null) {
+            initData = GraffitiData.generateDefault();
+        }
         mNoteCalculator = new SimpleNextNoteCalculator();
-        mGraffitiData = GraffitiData.generateDefault();
-
+        mGraffitiData = initData;
         mDrawingLayer = null;
-
     }
 
     @Override
@@ -113,7 +114,7 @@ public class GrafittiView extends ViewGroup {
 
     public void notifyDataChanged(GraffitiLayerData layerData) {
         GraffitiLayerView view = findViewWithTag(layerData);
-        if (findViewWithTag(layerData) == null) {
+        if (view == null) {
             view = new GraffitiLayerView(getContext(), layerData);
             view.setTag(layerData);
             addView(view);
@@ -121,5 +122,6 @@ public class GrafittiView extends ViewGroup {
             view.notifyDataChanged();
         }
     }
+
 
 }

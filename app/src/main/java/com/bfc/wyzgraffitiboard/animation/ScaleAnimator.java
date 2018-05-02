@@ -3,7 +3,7 @@ package com.bfc.wyzgraffitiboard.animation;
 import android.graphics.RectF;
 
 import com.bfc.wyzgraffitiboard.data.GraffitiLayerData;
-import com.bfc.wyzgraffitiboard.view.GraffitiLayerView;
+import com.bfc.wyzgraffitiboard.view.test.GraffitiLayerLogicView;
 
 /**
  * Created by fishyu on 2018/5/2.
@@ -12,7 +12,7 @@ import com.bfc.wyzgraffitiboard.view.GraffitiLayerView;
 public class ScaleAnimator extends AbstractBaseAnimator {
 
 
-    public ScaleAnimator(GraffitiLayerData data, GraffitiLayerView view, long duration, float from, float to) {
+    public ScaleAnimator(GraffitiLayerData data, GraffitiLayerLogicView view, long duration, float from, float to) {
         super(data, view, duration, from, to);
     }
 

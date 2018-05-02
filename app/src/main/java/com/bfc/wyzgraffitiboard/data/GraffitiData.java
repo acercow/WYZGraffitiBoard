@@ -9,7 +9,7 @@ import java.util.List;
 
 public class GraffitiData {
 
-    public static final boolean mOptimizeMergeLayer = true;
+    public static final boolean mOptimizeMergeLayer = false;
 
     /**
      * 图层

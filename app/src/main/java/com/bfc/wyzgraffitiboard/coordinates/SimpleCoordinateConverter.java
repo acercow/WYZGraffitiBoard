@@ -1,7 +1,6 @@
 package com.bfc.wyzgraffitiboard.coordinates;
 
 import android.graphics.RectF;
-import android.view.View;
 
 import com.bfc.wyzgraffitiboard.data.GraffitiLayerData;
 
@@ -19,9 +18,9 @@ public class SimpleCoordinateConverter implements ICoordinateConverter {
     final float mWidthFactor;
     final float mHeightFactor;
 
-    public SimpleCoordinateConverter(GraffitiLayerData layerData, View view) {
-        mViewWidth = view.getMeasuredWidth();
-        mViewHeight = view.getMeasuredHeight();
+    public SimpleCoordinateConverter(GraffitiLayerData layerData, int viewWidth, int viewHeight) {
+        mViewWidth = viewWidth;
+        mViewHeight = viewHeight;
 
         mWidthFactor = (float) mViewWidth / layerData.getWidth();
         mHeightFactor = (float) mViewHeight / layerData.getHeight();

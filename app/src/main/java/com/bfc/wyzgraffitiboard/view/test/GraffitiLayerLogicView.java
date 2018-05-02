@@ -1,4 +1,4 @@
-package com.bfc.wyzgraffitiboard.view;
+package com.bfc.wyzgraffitiboard.view.test;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -10,13 +10,14 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
 import android.graphics.Shader;
-import android.view.View;
 
 import com.bfc.wyzgraffitiboard.animation.AbstractBaseAnimator;
+import com.bfc.wyzgraffitiboard.animation.AnimatorFactory;
 import com.bfc.wyzgraffitiboard.coordinates.ICoordinateConverter;
 import com.bfc.wyzgraffitiboard.coordinates.SimpleCoordinateConverter;
 import com.bfc.wyzgraffitiboard.data.GraffitiLayerData;
 import com.bfc.wyzgraffitiboard.data.GraffitiNoteData;
+import com.bfc.wyzgraffitiboard.view.logic.LogicView;
 
 /**
  * Created by fishyu on 2018/4/28.
@@ -24,9 +25,10 @@ import com.bfc.wyzgraffitiboard.data.GraffitiNoteData;
  * 图层绘制
  * <p>
  */
-public class GraffitiLayerView extends View {
+public class GraffitiLayerLogicView extends LogicView {
 
     private ICoordinateConverter mCoordinateConverter;
+    private GraffitiLayerData mLayerData;
 
     private Path mPath;
     private Paint mPaint;
@@ -36,14 +38,13 @@ public class GraffitiLayerView extends View {
     private float mProportion;
     private Matrix mMatrix;
 
-    public GraffitiLayerView(Context context, GraffitiLayerData data) {
+    public GraffitiLayerLogicView(Context context, GraffitiLayerData data) {
         super(context);
         initDrawParams();
-        setTag(data);
-        mGiftIcon = BitmapFactory.decodeResource(getResources(), data.mIconRes);
+        mGiftIcon = BitmapFactory.decodeResource(getContext().getResources(), data.mIconRes);
 
         if (getLayerData().hasAnimation()) {
-//            mAnimator = AnimatorFactory.create(getLayerData(), this);
+            mAnimator = AnimatorFactory.create(getLayerData(), this);
         }
     }
 
@@ -66,7 +67,7 @@ public class GraffitiLayerView extends View {
      * @return
      */
     public GraffitiLayerData getLayerData() {
-        return (GraffitiLayerData) getTag();
+        return mLayerData;
     }
 
 

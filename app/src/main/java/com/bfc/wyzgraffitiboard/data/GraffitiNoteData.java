@@ -8,7 +8,7 @@ import android.graphics.RectF;
 
 public class GraffitiNoteData {
 
-    public GraffitiLayerData mLayerData;
+    private GraffitiLayerData mLayerData;
 
     /**
      * 是否渲染
@@ -36,5 +36,9 @@ public class GraffitiNoteData {
 
     public RectF getCalculateRectF() {
         return mLayerData.mAnimator == null ? getOriginalRectF() : mLayerData.mAnimator.getAnimateRectF(getOriginalRectF(), mCalculateRectF);
+    }
+
+    public GraffitiLayerData getLayerData() {
+        return mLayerData;
     }
 }
