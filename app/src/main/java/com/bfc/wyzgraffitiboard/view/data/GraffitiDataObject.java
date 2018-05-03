@@ -1,4 +1,6 @@
-package com.bfc.wyzgraffitiboard.data;
+package com.bfc.wyzgraffitiboard.view.data;
+
+import com.bfc.wyzgraffitiboard.bean.GraffitiLayerBean;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -7,14 +9,14 @@ import java.util.List;
  * Created by fishyu on 2018/4/28.
  */
 
-public class GraffitiData {
+public class GraffitiDataObject {
 
     public static final boolean mOptimizeMergeLayer = false;
 
     /**
      * 图层
      */
-    public List<GraffitiLayerData> mLayers = new ArrayList<>();
+    public List<GraffitiLayerDataObject> mLayers = new ArrayList<>();
 
 
     /**
@@ -32,7 +34,7 @@ public class GraffitiData {
      *
      * @param data
      */
-    private void addLayer(GraffitiLayerData data) {
+    private void addLayer(GraffitiLayerDataObject data) {
         if (data == null) {
             return;
         }
@@ -48,32 +50,32 @@ public class GraffitiData {
      *
      * @param data
      */
-    public void removeLayer(GraffitiLayerData data) {
+    public void removeLayer(GraffitiLayerDataObject data) {
         mLayers.remove(data);
     }
 
 
-    public List<GraffitiLayerData> getLayers() {
+    public List<GraffitiLayerDataObject> getLayers() {
         return mLayers;
     }
 
 
-    public static final GraffitiData generateDefault() {
-        return new GraffitiData();
+    public static final GraffitiDataObject generateDefault() {
+        return new GraffitiDataObject();
     }
 
 
-    public GraffitiLayerData getDrawingLayer() {
+    public GraffitiLayerDataObject getDrawingLayer() {
         if (mOptimizeMergeLayer) {
             int size = getLayerCount();
             for (int i = size - 1; i >= 0; i--) {
-                GraffitiLayerData layerData = getLayers().get(i);
-                if (layerData.mergeAble()) {
+                GraffitiLayerDataObject layerData = getLayers().get(i);
+                if (layerData.isMergeAble()) {
                     return layerData;
                 }
             }
         }
-        GraffitiLayerData layerData = GraffitiLayerData.generateDefault();
+        GraffitiLayerDataObject layerData = new GraffitiLayerDataObject(GraffitiLayerBean.buildTest());
         addLayer(layerData);
         return layerData;
     }

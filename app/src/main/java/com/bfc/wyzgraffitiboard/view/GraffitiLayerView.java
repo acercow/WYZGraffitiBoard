@@ -10,13 +10,12 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
 import android.graphics.Shader;
+import android.util.Log;
 import android.view.View;
 
-import com.bfc.wyzgraffitiboard.animation.AbstractBaseAnimator;
-import com.bfc.wyzgraffitiboard.coordinates.ICoordinateConverter;
-import com.bfc.wyzgraffitiboard.coordinates.SimpleCoordinateConverter;
-import com.bfc.wyzgraffitiboard.data.GraffitiLayerData;
-import com.bfc.wyzgraffitiboard.data.GraffitiNoteData;
+import com.bfc.wyzgraffitiboard.view.animation.AbstractBaseAnimator;
+import com.bfc.wyzgraffitiboard.view.data.GraffitiLayerDataObject;
+import com.bfc.wyzgraffitiboard.view.data.GraffitiNoteDataObject;
 
 /**
  * Created by fishyu on 2018/4/28.
@@ -26,7 +25,7 @@ import com.bfc.wyzgraffitiboard.data.GraffitiNoteData;
  */
 public class GraffitiLayerView extends View {
 
-    private ICoordinateConverter mCoordinateConverter;
+    static final String TAG = GraffitiLayerView.class.getSimpleName();
 
     private Path mPath;
     private Paint mPaint;
@@ -36,13 +35,13 @@ public class GraffitiLayerView extends View {
     private float mProportion;
     private Matrix mMatrix;
 
-    public GraffitiLayerView(Context context, GraffitiLayerData data) {
+    public GraffitiLayerView(Context context, GraffitiLayerDataObject data) {
         super(context);
         initDrawParams();
         setTag(data);
-        mGiftIcon = BitmapFactory.decodeResource(getResources(), data.mIconRes);
+        mGiftIcon = BitmapFactory.decodeResource(getResources(), data.getNoteDrawableRes());
 
-        if (getLayerData().hasAnimation()) {
+        if (getLayerData().isHasAnimation()) {
 //            mAnimator = AnimatorFactory.create(getLayerData(), this);
         }
     }
@@ -65,8 +64,8 @@ public class GraffitiLayerView extends View {
      *
      * @return
      */
-    public GraffitiLayerData getLayerData() {
-        return (GraffitiLayerData) getTag();
+    public GraffitiLayerDataObject getLayerData() {
+        return (GraffitiLayerDataObject) getTag();
     }
 
 
@@ -81,8 +80,8 @@ public class GraffitiLayerView extends View {
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
-        if (w != oldw || h != oldh) {
-            mCoordinateConverter = new SimpleCoordinateConverter(getLayerData(), w, h);
+        if (w >= 0 && h >= 0) {
+            getLayerData().initialize(w, h);
         }
     }
 
@@ -112,21 +111,23 @@ public class GraffitiLayerView extends View {
         super.onDraw(canvas);
         if (mBlankCanvas <= 0) {
             mBlankCanvas = canvas.save();
+            Log.e(TAG, " mBlankCanvas -> " + mBlankCanvas);
         }
 
         if (getLayerData().isForceDrawAll()) {
             //TODO clean the canvas ??
+            Log.e(TAG, " restore canvas to -> " + mBlankCanvas);
             canvas.restoreToCount(mBlankCanvas);
         }
 
         int size = getLayerData().getCount();
         for (int i = size - 1; i >= 0; i--) {
-            GraffitiNoteData note = getLayerData().getNotes().get(i);
+            GraffitiNoteDataObject note = getLayerData().getNotes().get(i);
             if (note.mDrawn && !getLayerData().isForceDrawAll()) {
                 return;
             }
+            drawNote(canvas, note);
             note.mDrawn = true;
-            onDrawNote(canvas, note, mCoordinateConverter.convert(note.getCalculateRectF(), null));
         }
 
         //if force draw all, reset it's status
@@ -139,22 +140,18 @@ public class GraffitiLayerView extends View {
      * @param canvas
      * @param note   Note information
      */
-    protected void onDrawNote(Canvas canvas, GraffitiNoteData note, RectF rectF) {
-        // shall we have a better plan ?
+    protected void drawNote(Canvas canvas, GraffitiNoteDataObject note) {
+        Log.v(TAG, "drawNote note -> " + note);
+        onDrawNote(canvas, mGiftIcon, note.getCalculateRectF(), note);
+    }
 
-        mCanvas.drawBitmap(mGiftIcon, null, rectF, null);
 
-//        float proportion = (float) canvas.getHeight() / mBitmap.getHeight();
-//        if (proportion < 1) {
-//            mProportion = proportion;
-//            mMatrix.reset();
-//            mMatrix.postScale(proportion, proportion);
-//            mMatrix.postTranslate((canvas.getWidth() - mBitmap.getWidth() * proportion) / 2, 0);
-//            canvas.drawBitmap(mBitmap, mMatrix, mPaint);
-//        } else {
-//            mProportion = 0;
-//            canvas.drawBitmap(mBitmap, 0, 0, mPaint);
-//        }
+    protected void onDrawNote(Canvas canvas, Bitmap bitmap, RectF rectF, GraffitiNoteDataObject note) {
+        Log.v(TAG, "onDrawNote rectF -> " + rectF + " bitmap -> " + bitmap);
+
+        rectF = new RectF(500, 500, 100, 100);
+
+        canvas.drawBitmap(bitmap, null, rectF, null);
     }
 
 

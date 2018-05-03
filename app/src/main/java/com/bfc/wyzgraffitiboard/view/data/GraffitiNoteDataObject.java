@@ -1,14 +1,17 @@
-package com.bfc.wyzgraffitiboard.data;
+package com.bfc.wyzgraffitiboard.view.data;
 
 import android.graphics.RectF;
+
+import com.bfc.wyzgraffitiboard.bean.GraffitiNoteBean;
 
 /**
  * Created by fishyu on 2018/5/2.
  */
+public class GraffitiNoteDataObject {
 
-public class GraffitiNoteData {
+    private GraffitiLayerDataObject mLayerData;
 
-    private GraffitiLayerData mLayerData;
+    static final RectF RECTF_EMPTY = new RectF();
 
     /**
      * 是否渲染
@@ -18,7 +21,15 @@ public class GraffitiNoteData {
     private RectF mOriginalRectF;
     private RectF mCalculateRectF;
 
-    public GraffitiNoteData(GraffitiLayerData layerData, float centerX, float centerY) {
+    /**
+     * @param layerData
+     * @param bean
+     */
+    public GraffitiNoteDataObject(GraffitiLayerDataObject layerData, GraffitiNoteBean bean) {
+        this(layerData, layerData.mCoordinateConverter.convertWidthPercentageToPixel(bean.mPercentageX), layerData.mCoordinateConverter.convertHeightPercentageToPixel(bean.mPercentageY));
+    }
+
+    public GraffitiNoteDataObject(GraffitiLayerDataObject layerData, float centerX, float centerY) {
         mLayerData = layerData;
         mOriginalRectF = new RectF(
                 centerX - layerData.getNoteWidth() / 2,
@@ -38,7 +49,12 @@ public class GraffitiNoteData {
         return mLayerData.mAnimator == null ? getOriginalRectF() : mLayerData.mAnimator.getAnimateRectF(getOriginalRectF(), mCalculateRectF);
     }
 
-    public GraffitiLayerData getLayerData() {
+    public GraffitiLayerDataObject getLayerData() {
         return mLayerData;
+    }
+
+    @Override
+    public String toString() {
+        return "[mDrawn:" + mDrawn + ",mOriginalRectF:" + mOriginalRectF + "]";
     }
 }

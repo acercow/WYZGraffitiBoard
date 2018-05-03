@@ -1,11 +1,12 @@
-package com.bfc.wyzgraffitiboard.animation;
+package com.bfc.wyzgraffitiboard.view.animation;
 
 import android.animation.Animator;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.graphics.RectF;
+import android.util.Log;
 
-import com.bfc.wyzgraffitiboard.data.GraffitiLayerData;
+import com.bfc.wyzgraffitiboard.view.data.GraffitiLayerDataObject;
 import com.bfc.wyzgraffitiboard.view.test.GraffitiLayerLogicView;
 
 /**
@@ -14,18 +15,20 @@ import com.bfc.wyzgraffitiboard.view.test.GraffitiLayerLogicView;
 
 public abstract class AbstractBaseAnimator implements Animator.AnimatorListener, ValueAnimator.AnimatorUpdateListener {
 
+    protected final String TAG = getClass().getSimpleName();
+
     protected GraffitiLayerLogicView mLayerView;
-    protected GraffitiLayerData mLayerData;
+    protected GraffitiLayerDataObject mLayerData;
 
     private ObjectAnimator mAnimator;
 
     private float mCurrentValue;
 
-    private static final long ANIMATION_FRAME_TIME = 1000 / 30;
+    private static final long ANIMATION_FRAME_TIME = 1000 / 45;
 
     private long mLastUpdateTime = 0;
 
-    public AbstractBaseAnimator(GraffitiLayerData data, GraffitiLayerLogicView view, long duration, float from, float to) {
+    public AbstractBaseAnimator(GraffitiLayerDataObject data, GraffitiLayerLogicView view, long duration, float from, float to) {
         mLayerData = data;
         mLayerView = view;
 
@@ -33,6 +36,7 @@ public abstract class AbstractBaseAnimator implements Animator.AnimatorListener,
         mAnimator.setDuration(duration);
         mAnimator.addListener(this);
         mAnimator.addUpdateListener(this);
+        mAnimator.setRepeatCount(ValueAnimator.INFINITE);
         mAnimator.setRepeatMode(ValueAnimator.REVERSE);
     }
 
@@ -87,12 +91,14 @@ public abstract class AbstractBaseAnimator implements Animator.AnimatorListener,
 
     @Override
     public void onAnimationStart(Animator animation) {
+        Log.v(TAG, "onAnimationStart");
         setValue(0);
         mLayerData.installAnimator(this);
     }
 
     @Override
     public void onAnimationEnd(Animator animation) {
+        Log.v(TAG, "onAnimationEnd");
         setValue(0);
         notifyView();
         mLayerData.uninstallAnimator();
@@ -100,6 +106,7 @@ public abstract class AbstractBaseAnimator implements Animator.AnimatorListener,
 
     @Override
     public void onAnimationCancel(Animator animation) {
+        Log.v(TAG, "onAnimationCancel");
         setValue(0);
         notifyView();
         mLayerData.uninstallAnimator();
@@ -107,7 +114,7 @@ public abstract class AbstractBaseAnimator implements Animator.AnimatorListener,
 
     @Override
     public void onAnimationRepeat(Animator animation) {
-
+        Log.v(TAG, "onAnimationRepeat");
     }
 
     @Override

@@ -13,7 +13,7 @@ import android.view.View;
  */
 public class LogicView {
 
-    static final String TAG = LogicView.class.getSimpleName();
+    protected final String TAG = this.getClass().getSimpleName();
 
     private View mInternalView;
 
