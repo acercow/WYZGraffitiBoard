@@ -4,24 +4,27 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.Shader;
+import android.graphics.PorterDuff;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.TextView;
 
 import com.bfc.wyzgraffitiboard.R;
+import com.bfc.wyzgraffitiboard.graffitimanager.DrawStatusListener;
 
 public class GraffitiBoardView extends View {
     private static final String TAG = GraffitiBoardView.class.getSimpleName();
+    private static final int MIN_GIFT_NUM = 10; //最少可以发送的涂鸦礼物数量
     private Path mPath;
     private Paint mPaint;
     private float downX, downY;
@@ -32,6 +35,9 @@ public class GraffitiBoardView extends View {
     private float mProportion;
     private Matrix mMatrix;
     private float mCanvasScale;
+    private boolean mStartDraw; //是否开始绘制
+    private DrawStatusListener mDrawStatusListener;
+    private int mGiftNum;
 
 
     public GraffitiBoardView(Context context) {
@@ -79,7 +85,7 @@ public class GraffitiBoardView extends View {
             mCanvasScale = w / 1080F;
             mBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
 
-            Resources resources=getResources();
+            Resources resources = getResources();
             DisplayMetrics displayMetrics = resources.getDisplayMetrics();
             float density = displayMetrics.density;
             int densityDpi = displayMetrics.densityDpi;
@@ -93,6 +99,8 @@ public class GraffitiBoardView extends View {
             mGiftIcon = Bitmap.createBitmap(mGiftIcon, 0, 0, mGiftIcon.getWidth(), mGiftIcon.getHeight(), matrix, true);
         }
         mCanvas = new Canvas(mBitmap);
+        TextView textView = new TextView(getContext());
+        textView.draw(mCanvas);
     }
 
     @Override
@@ -109,7 +117,7 @@ public class GraffitiBoardView extends View {
             case MotionEvent.ACTION_DOWN:
                 tempX = pointX;
                 tempY = pointY;
-                mCanvas.drawBitmap(mGiftIcon, pointX - mGiftIcon.getWidth() / 2, pointY - mGiftIcon.getHeight() / 2, null);
+                drawBitmap(mGiftIcon, pointX - mGiftIcon.getWidth() / 2, pointY - mGiftIcon.getHeight() / 2, null);
                 return true;
             case MotionEvent.ACTION_MOVE:
 
@@ -119,7 +127,7 @@ public class GraffitiBoardView extends View {
                     float gapX = (pointX - tempX) / ratio;
                     float gapY = (pointY - tempY) / ratio;
                     for (int i = 1; i <= ratio; i++) {
-                        mCanvas.drawBitmap(mGiftIcon, tempX + gapX - mGiftIcon.getWidth() / 2, tempY + gapY - mGiftIcon.getHeight() / 2, null);
+                        drawBitmap(mGiftIcon, tempX + gapX - mGiftIcon.getWidth() / 2, tempY + gapY - mGiftIcon.getHeight() / 2, null);
                         tempX = tempX + gapX;
                         tempY = tempY + gapY;
                     }
@@ -127,12 +135,63 @@ public class GraffitiBoardView extends View {
 
 //                mCanvas.drawPath(mPath, mPaint);
                 break;
-            default: 
+            default:
                 return false;
         }
         // Force a view to draw again
         invalidate();
         return false;
+    }
+
+
+    void printSamples(MotionEvent ev) {
+        final int historySize = ev.getHistorySize();
+        final int pointerCount = ev.getPointerCount();
+        for (int h = 0; h < historySize; h++) {
+            System.out.printf("At time %d:", ev.getHistoricalEventTime(h));
+            for (int p = 0; p < pointerCount; p++) {
+                System.out.printf("  pointer %d: (%f,%f)",
+                        ev.getPointerId(p), ev.getHistoricalX(p, h), ev.getHistoricalY(p, h));
+            }
+        }
+        System.out.printf("At time %d:", ev.getEventTime());
+        for (int p = 0; p < pointerCount; p++) {
+            System.out.printf("  pointer %d: (%f,%f)",
+                    ev.getPointerId(p), ev.getX(p), ev.getY(p));
+        }
+    }
+
+    private void drawBitmap(@NonNull Bitmap bitmap, float left, float top, @Nullable Paint paint) {
+        mCanvas.drawBitmap(bitmap, left, top, paint);
+        if (mDrawStatusListener != null) {
+            if (!mStartDraw) {
+                mStartDraw = true;
+                mDrawStatusListener.onStatusChange(DrawStatusListener.DrawStatus.START, mGiftNum, mGiftNum * 10);
+            }
+            if (mGiftNum >= MIN_GIFT_NUM) {
+                mDrawStatusListener.onStatusChange(DrawStatusListener.DrawStatus.FINISH, mGiftNum, mGiftNum * 10);
+            }
+        }
+        mGiftNum++;
+    }
+
+    public void setDrawStatusListener(DrawStatusListener drawStatusListener) {
+        mDrawStatusListener = drawStatusListener;
+    }
+
+    public void clearCanvas() {
+        mCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
+        invalidate();
+
+        resetStatus();
+    }
+
+    private void resetStatus() {
+        mGiftNum = 0;
+        mStartDraw = false;
+        if (mDrawStatusListener != null) {
+            mDrawStatusListener.onStatusChange(DrawStatusListener.DrawStatus.DEFAULT, 0, 0);
+        }
     }
 }
 

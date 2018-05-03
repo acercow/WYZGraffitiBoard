@@ -1,18 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".MainActivity">
+                xmlns:tools="http://schemas.android.com/tools"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/black"
+                tools:context=".MainActivity">
+
+    <TextView
+        android:id="@+id/tv_clear"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginLeft="10dp"
+        android:layout_marginRight="10dp"
+        android:gravity="center"
+        android:text="清除"
+        android:textColor="@color/color_clear_gray"
+        android:textSize="16sp"/>
+
+    <TextView
+        android:id="@+id/tv_warn"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:layout_centerHorizontal="true"
+        android:gravity="center"
+        android:text="描述"
+        android:textColor="@android:color/white"
+        android:textSize="12sp"/>
+
+    <ImageView
+        android:id="@+id/iv_close"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_alignParentRight="true"
+        android:src="@drawable/yizhibo_icon_close"/>
 
     <com.bfc.wyzgraffitiboard.view.GraffitiBoardView
         android:id="@+id/graffiti_board"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:layout_below="@id/tv_clear"/>
+
+    <TextView
+        android:id="@+id/tv_guide"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/tv_clear"
+        android:layout_centerInParent="true"
+        android:gravity="center"
+        android:text="在此区域可绘制礼物图案"
+        android:textColor="@android:color/white"
+        android:textSize="12sp"/>
 
     <!--<com.bfc.wyzgraffitiboard.View.DrawingView-->
-        <!--android:layout_width="match_parent"-->
-        <!--android:layout_height="match_parent" />-->
+    <!--android:layout_width="match_parent"-->
+    <!--android:layout_height="match_parent" />-->
 
 </RelativeLayout>
