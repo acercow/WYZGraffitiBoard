@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.RectF;
+import android.util.Log;
 import android.view.View;
 
 import com.sina.weibo.view.graffitiview.data.GraffitiLayerData;
@@ -18,7 +19,7 @@ import com.sina.weibo.view.graffitiview.data.GraffitiNoteData;
  */
 public class GraffitiLayerView extends View {
 
-    static final String TAG = GraffitiLayerView.class.getSimpleName();
+    final String TAG = GraffitiLayerView.class.getSimpleName() + this;
 
     private Bitmap mGiftIcon;
     private int mBlankCanvas = -1;
@@ -59,6 +60,7 @@ public class GraffitiLayerView extends View {
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
+        Log.e(TAG, "onSizeChanged w -> " + w + " h -> " + h);
         if (w != oldw || h != oldh) {
             if (w >= 0 && h >= 0) {
                 if (getLayerData().installView(w, h)) {
@@ -106,6 +108,7 @@ public class GraffitiLayerView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+        Log.e(TAG, "onDraw ");
         if (getLayerData().isForceDrawAll()) {
             //TODO clean the canvas ??
 //            Log.e(TAG, " restore canvas to -> " + mBlankCanvas);
@@ -146,7 +149,7 @@ public class GraffitiLayerView extends View {
      * @param rectF
      */
     protected void onDrawNote(Canvas canvas, GraffitiNoteData note, Bitmap bitmap, RectF rectF) {
-//        Log.v(TAG, "onDrawNote rectF -> " + rectF + " bitmap -> " + bitmap);
+        Log.v(TAG, "onDrawNote rectF -> " + rectF + " bitmap -> " + bitmap);
         canvas.drawBitmap(bitmap, null, rectF, null);
     }
 

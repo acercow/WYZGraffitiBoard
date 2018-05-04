@@ -1,7 +1,7 @@
 package com.sina.weibo.view.graffitiview.bean;
 
-import com.sina.weibo.view.graffitiview.data.GraffitiNoteData;
 import com.google.gson.annotations.SerializedName;
+import com.sina.weibo.view.graffitiview.data.GraffitiNoteData;
 
 import java.io.Serializable;
 
@@ -17,7 +17,11 @@ public class GraffitiNoteBean implements Serializable {
     @SerializedName("y")
     private float mPercentageY;
 
+    public GraffitiNoteBean() {
+    }
+
     public GraffitiNoteBean(GraffitiNoteData noteData) {
+        this();
         mPercentageX = noteData.getLayerData().getCoordinateConverter().convertWidthPixelToPercentage(noteData.getOriginalRectF().centerX());
         mPercentageY = noteData.getLayerData().getCoordinateConverter().convertHeightPixelToPercentage(noteData.getOriginalRectF().centerY());
     }

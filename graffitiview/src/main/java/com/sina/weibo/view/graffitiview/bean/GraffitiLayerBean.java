@@ -47,20 +47,33 @@ public class GraffitiLayerBean implements Serializable {
     @SerializedName("notes")
     private List<GraffitiNoteBean> mNotes;
 
+    public GraffitiLayerBean() {
+
+    }
+
     /**
      * Build buildFrom {@link GraffitiLayerData}
      *
      * @param layerData
      * @return
      */
-    public static GraffitiLayerBean buildFrom(GraffitiLayerData layerData) {
+    public GraffitiLayerBean(GraffitiLayerData layerData) {
+        this();
         GraffitiLayerBean bean = layerData.getGraffitiLayerBean();
-        bean.mNotes = new ArrayList<>();
+        this.id = bean.id;
+        this.mPercentageCanvasWidth = bean.mPercentageCanvasWidth;
+        this.mPercentageCanvasHeight = bean.mPercentageCanvasHeight;
+        this.mPercentageNoteWidth = bean.mPercentageNoteWidth;
+        this.mPercentageNoteHeight = bean.mPercentageNoteHeight;
+        this.mPercentageNoteDistance = bean.mPercentageNoteDistance;
+        this.mNoteType = bean.mNoteType;
+        this.mNoteDrawableRes = bean.mNoteDrawableRes;
+        this.mAnimation = bean.mAnimation;
+        mNotes = new ArrayList<>();
         for (GraffitiNoteData noteData : layerData.getNotes()) {
             GraffitiNoteBean b = new GraffitiNoteBean(noteData);
-            bean.mNotes.add(b);
+            mNotes.add(b);
         }
-        return bean;
     }
 
 
@@ -104,12 +117,6 @@ public class GraffitiLayerBean implements Serializable {
         return mAnimation;
     }
 
-    public static final GraffitiLayerBean buildTest() {
-        GraffitiLayerBean bean = new GraffitiLayerBean();
-        bean.mAnimation = 1;
-        return bean;
-    }
-
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof GraffitiLayerBean) {
@@ -134,5 +141,11 @@ public class GraffitiLayerBean implements Serializable {
                 ",mAnimation:" + mAnimation +
                 ",mNotes:" + mNotes +
                 "]";
+    }
+
+    public static final GraffitiLayerBean buildTest() {
+        GraffitiLayerBean bean = new GraffitiLayerBean();
+        bean.mAnimation = 1;
+        return bean;
     }
 }

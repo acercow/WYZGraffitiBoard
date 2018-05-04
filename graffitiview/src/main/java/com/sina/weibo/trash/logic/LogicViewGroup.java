@@ -7,7 +7,6 @@ import android.view.View;
 import java.util.ArrayList;
 import java.util.List;
 
-import hugo.weaving.DebugLog;
 
 /**
  * Created by fishyu on 2018/5/2.
@@ -90,7 +89,6 @@ public class LogicViewGroup extends View {
         }
     }
 
-    @DebugLog
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);

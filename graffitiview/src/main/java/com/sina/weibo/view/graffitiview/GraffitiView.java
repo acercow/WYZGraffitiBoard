@@ -70,6 +70,7 @@ public class GraffitiView extends ViewGroup {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         // square this view
         heightMeasureSpec = widthMeasureSpec;
+
         final int width = MeasureSpec.getSize(widthMeasureSpec);
         final int height = MeasureSpec.getSize(heightMeasureSpec);
         int count = getChildCount();
@@ -77,9 +78,18 @@ public class GraffitiView extends ViewGroup {
             View child = getChildAt(i);
             child.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
         }
+
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
     }
 
+    @Override
+    protected void onLayout(boolean changed, int l, int t, int r, int b) {
+        int count = getChildCount();
+        for (int i = 0; i < count; i++) {
+            View child = getChildAt(i);
+            child.layout(l, t, r, b);
+        }
+    }
 
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
@@ -135,14 +145,6 @@ public class GraffitiView extends ViewGroup {
         }
     }
 
-    @Override
-    protected void onLayout(boolean changed, int l, int t, int r, int b) {
-        int count = getChildCount();
-        for (int i = 0; i < count; i++) {
-            View child = getChildAt(i);
-            child.layout(l, t, r, b);
-        }
-    }
 
     @Override
     public void draw(Canvas canvas) {
@@ -169,7 +171,7 @@ public class GraffitiView extends ViewGroup {
             }
         }
 
-        for (GraffitiLayerData layerData : data.getLayers()) {
+        for (final GraffitiLayerData layerData : data.getLayers()) {
             notifyDataChanged(layerData);
         }
     }
@@ -180,6 +182,7 @@ public class GraffitiView extends ViewGroup {
      * @param layerData
      */
     public void notifyDataChanged(GraffitiLayerData layerData) {
+        Log.e(TAG, "notifyDataChanged -> " + layerData);
         boolean deleted = !mGraffitiData.getLayers().contains(layerData);
         GraffitiLayerView view = findViewWithTag(layerData);
         if (view == null) {

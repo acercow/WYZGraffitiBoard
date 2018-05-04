@@ -16,7 +16,6 @@ import com.sina.weibo.trash.logic.LogicView;
 import com.sina.weibo.view.graffitiview.data.GraffitiLayerData;
 import com.sina.weibo.view.graffitiview.data.GraffitiNoteData;
 
-import hugo.weaving.DebugLog;
 
 /**
  * Created by fishyu on 2018/4/28.
@@ -107,7 +106,6 @@ public class GraffitiLayerLogicView extends LogicView {
 
     private int mBlankCanvas = -1;
 
-    @DebugLog
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);

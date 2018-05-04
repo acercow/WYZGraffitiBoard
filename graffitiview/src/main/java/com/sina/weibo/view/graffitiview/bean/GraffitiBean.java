@@ -1,9 +1,9 @@
 package com.sina.weibo.view.graffitiview.bean;
 
-import com.sina.weibo.view.graffitiview.data.GraffitiData;
-import com.sina.weibo.view.graffitiview.data.GraffitiLayerData;
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
+import com.sina.weibo.view.graffitiview.data.GraffitiData;
+import com.sina.weibo.view.graffitiview.data.GraffitiLayerData;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -21,11 +21,18 @@ public class GraffitiBean implements Serializable {
     @SerializedName("layers")
     private List<GraffitiLayerBean> mLayers;
 
+
+    public GraffitiBean() {
+
+    }
+
+
     public GraffitiBean(GraffitiData graffitiData) {
+        this();
         mLayers = new ArrayList<>();
 
         for (GraffitiLayerData layerData : graffitiData.getLayers()) {
-            GraffitiLayerBean bean = GraffitiLayerBean.buildFrom(layerData);
+            GraffitiLayerBean bean = new GraffitiLayerBean(layerData);
             mLayers.add(bean);
         }
     }
