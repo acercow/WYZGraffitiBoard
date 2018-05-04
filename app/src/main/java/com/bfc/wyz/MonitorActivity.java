@@ -1,4 +1,4 @@
-package com.bfc.wyzgraffitiboard;
+package com.bfc.wyz;
 
 import android.app.Activity;
 import android.content.Context;

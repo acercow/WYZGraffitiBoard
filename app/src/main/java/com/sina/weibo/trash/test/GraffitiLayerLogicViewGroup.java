@@ -1,9 +1,9 @@
-package com.bfc.wyzgraffitiboard.trash.test;
+package com.sina.weibo.trash.test;
 
 import android.content.Context;
 import android.graphics.Canvas;
 
-import com.bfc.wyzgraffitiboard.trash.logic.LogicViewGroup;
+import com.sina.weibo.trash.logic.LogicViewGroup;
 
 /**
  * Created by fishyu on 2018/5/2.

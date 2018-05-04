@@ -1,10 +1,10 @@
-package com.bfc.wyzgraffitiboard.trash.test;
+package com.sina.weibo.trash.test;
 
 import android.content.Context;
 import android.util.AttributeSet;
 
-import com.bfc.wyzgraffitiboard.view.GraffitiView;
-import com.bfc.wyzgraffitiboard.view.data.GraffitiLayerData;
+import com.sina.weibo.view.graffitiview.GraffitiView;
+import com.sina.weibo.view.graffitiview.data.GraffitiLayerData;
 
 import java.util.HashMap;
 import java.util.Map;

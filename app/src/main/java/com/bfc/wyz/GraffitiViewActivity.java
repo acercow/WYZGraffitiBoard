@@ -1,4 +1,4 @@
-package com.bfc.wyzgraffitiboard;
+package com.bfc.wyz;
 
 import android.app.Activity;
 import android.content.Context;
@@ -6,9 +6,9 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 
-import com.bfc.wyzgraffitiboard.bean.GraffitiBean;
-import com.bfc.wyzgraffitiboard.view.GraffitiView;
-import com.bfc.wyzgraffitiboard.view.data.GraffitiData;
+import com.sina.weibo.view.graffitiview.bean.GraffitiBean;
+import com.sina.weibo.view.graffitiview.GraffitiView;
+import com.sina.weibo.view.graffitiview.data.GraffitiData;
 
 import org.json.JSONException;
 import org.json.JSONObject;

@@ -1,16 +1,13 @@
-package com.bfc.wyzgraffitiboard.view;
+package com.sina.weibo.view;
 
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.BitmapShader;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.Shader;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
@@ -18,7 +15,7 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
-import com.bfc.wyzgraffitiboard.R;
+import com.bfc.wyz.R;
 
 public class GraffitiBoardView extends View {
     private static final String TAG = GraffitiBoardView.class.getSimpleName();

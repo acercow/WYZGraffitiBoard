@@ -1,7 +1,7 @@
-package com.bfc.wyzgraffitiboard.bean;
+package com.sina.weibo.view.graffitiview.bean;
 
-import com.bfc.wyzgraffitiboard.view.data.GraffitiData;
-import com.bfc.wyzgraffitiboard.view.data.GraffitiLayerData;
+import com.sina.weibo.view.graffitiview.data.GraffitiData;
+import com.sina.weibo.view.graffitiview.data.GraffitiLayerData;
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 

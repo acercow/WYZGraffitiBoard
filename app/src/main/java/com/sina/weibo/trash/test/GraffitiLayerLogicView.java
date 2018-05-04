@@ -1,4 +1,4 @@
-package com.bfc.wyzgraffitiboard.trash.test;
+package com.sina.weibo.trash.test;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -12,9 +12,9 @@ import android.graphics.RectF;
 import android.graphics.Shader;
 import android.util.Log;
 
-import com.bfc.wyzgraffitiboard.trash.logic.LogicView;
-import com.bfc.wyzgraffitiboard.view.data.GraffitiLayerData;
-import com.bfc.wyzgraffitiboard.view.data.GraffitiNoteData;
+import com.sina.weibo.trash.logic.LogicView;
+import com.sina.weibo.view.graffitiview.data.GraffitiLayerData;
+import com.sina.weibo.view.graffitiview.data.GraffitiNoteData;
 
 import hugo.weaving.DebugLog;
 

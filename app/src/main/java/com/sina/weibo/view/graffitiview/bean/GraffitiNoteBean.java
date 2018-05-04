@@ -1,6 +1,6 @@
-package com.bfc.wyzgraffitiboard.bean;
+package com.sina.weibo.view.graffitiview.bean;
 
-import com.bfc.wyzgraffitiboard.view.data.GraffitiNoteData;
+import com.sina.weibo.view.graffitiview.data.GraffitiNoteData;
 import com.google.gson.annotations.SerializedName;
 
 import java.io.Serializable;

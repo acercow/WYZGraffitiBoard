@@ -1,10 +1,10 @@
-package com.bfc.wyzgraffitiboard.bean;
+package com.sina.weibo.view.graffitiview.bean;
 
 import android.text.TextUtils;
 
-import com.bfc.wyzgraffitiboard.R;
-import com.bfc.wyzgraffitiboard.view.data.GraffitiLayerData;
-import com.bfc.wyzgraffitiboard.view.data.GraffitiNoteData;
+import com.bfc.wyz.R;
+import com.sina.weibo.view.graffitiview.data.GraffitiLayerData;
+import com.sina.weibo.view.graffitiview.data.GraffitiNoteData;
 import com.google.gson.annotations.SerializedName;
 
 import java.io.Serializable;

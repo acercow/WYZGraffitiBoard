@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <com.bfc.wyzgraffitiboard.view.GraffitiView
+    <com.sina.weibo.view.graffitiview.GraffitiView
         android:id="@+id/graffiti_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
