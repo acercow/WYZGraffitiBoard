@@ -182,7 +182,6 @@ public class GraffitiView extends ViewGroup {
      * @param layerData
      */
     public void notifyDataChanged(GraffitiLayerData layerData) {
-        Log.e(TAG, "notifyDataChanged -> " + layerData);
         boolean deleted = !mGraffitiData.getLayers().contains(layerData);
         GraffitiLayerView view = findViewWithTag(layerData);
         if (view == null) {

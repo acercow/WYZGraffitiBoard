@@ -60,7 +60,6 @@ public class GraffitiLayerView extends View {
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
-        Log.e(TAG, "onSizeChanged w -> " + w + " h -> " + h);
         if (w != oldw || h != oldh) {
             if (w >= 0 && h >= 0) {
                 if (getLayerData().installView(w, h)) {
@@ -108,7 +107,6 @@ public class GraffitiLayerView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        Log.e(TAG, "onDraw ");
         if (getLayerData().isForceDrawAll()) {
             //TODO clean the canvas ??
 //            Log.e(TAG, " restore canvas to -> " + mBlankCanvas);
@@ -149,7 +147,6 @@ public class GraffitiLayerView extends View {
      * @param rectF
      */
     protected void onDrawNote(Canvas canvas, GraffitiNoteData note, Bitmap bitmap, RectF rectF) {
-        Log.v(TAG, "onDrawNote rectF -> " + rectF + " bitmap -> " + bitmap);
         canvas.drawBitmap(bitmap, null, rectF, null);
     }
 
