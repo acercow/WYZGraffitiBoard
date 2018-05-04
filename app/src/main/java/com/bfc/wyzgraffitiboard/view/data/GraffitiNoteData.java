@@ -7,16 +7,14 @@ import com.bfc.wyzgraffitiboard.bean.GraffitiNoteBean;
 /**
  * Created by fishyu on 2018/5/2.
  */
-public class GraffitiNoteDataObject {
+public class GraffitiNoteData {
 
-    private GraffitiLayerDataObject mLayerData;
-
-    static final RectF RECTF_EMPTY = new RectF();
+    private GraffitiLayerData mLayerData;
 
     /**
-     * 是否渲染
+     * Whether we are drawn or not
      */
-    public boolean mDrawn = false;
+    public boolean mDrawn;
 
     private RectF mOriginalRectF;
     private RectF mCalculateRectF;
@@ -25,11 +23,17 @@ public class GraffitiNoteDataObject {
      * @param layerData
      * @param bean
      */
-    public GraffitiNoteDataObject(GraffitiLayerDataObject layerData, GraffitiNoteBean bean) {
-        this(layerData, layerData.mCoordinateConverter.convertWidthPercentageToPixel(bean.mPercentageX), layerData.mCoordinateConverter.convertHeightPercentageToPixel(bean.mPercentageY));
+    public GraffitiNoteData(GraffitiLayerData layerData, GraffitiNoteBean bean) {
+        this(layerData, layerData.mCoordinateConverter.convertWidthPercentageToPixel(bean.getPercentageX()), layerData.mCoordinateConverter.convertHeightPercentageToPixel(bean.getPercentageY()));
     }
 
-    public GraffitiNoteDataObject(GraffitiLayerDataObject layerData, float centerX, float centerY) {
+    public GraffitiNoteData(GraffitiLayerData layerData, float centerX, float centerY) {
+        if (layerData == null) {
+            throw new IllegalArgumentException("layerData can not be null !");
+        }
+        if (layerData.getCoordinateConverter() == null) {
+            throw new IllegalArgumentException("has GraffitiLayerData called #installView(viewWidth,viewHeight) yet? ICoordinateConverter has not been installed yet.");
+        }
         mLayerData = layerData;
         mOriginalRectF = new RectF(
                 centerX - layerData.getNoteWidth() / 2,
@@ -49,7 +53,7 @@ public class GraffitiNoteDataObject {
         return mLayerData.mAnimator == null ? getOriginalRectF() : mLayerData.mAnimator.getAnimateRectF(getOriginalRectF(), mCalculateRectF);
     }
 
-    public GraffitiLayerDataObject getLayerData() {
+    public GraffitiLayerData getLayerData() {
         return mLayerData;
     }
 
@@ -57,4 +61,5 @@ public class GraffitiNoteDataObject {
     public String toString() {
         return "[mDrawn:" + mDrawn + ",mOriginalRectF:" + mOriginalRectF + "]";
     }
+
 }

@@ -3,10 +3,36 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <com.bfc.wyzgraffitiboard.view.test.GrafittiLogicView
+    <com.bfc.wyzgraffitiboard.view.GraffitiView
         android:id="@+id/graffiti_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#88818363" />
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/to_bean"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:onClick="onClick"
+            android:text="TO BEAN" />
+
+        <Button
+            android:id="@+id/from_bean"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:onClick="onClick"
+            android:text="FROM BEAN" />
+
+    </LinearLayout>
+
 
 </FrameLayout>

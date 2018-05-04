@@ -6,8 +6,7 @@ import android.animation.ValueAnimator;
 import android.graphics.RectF;
 import android.util.Log;
 
-import com.bfc.wyzgraffitiboard.view.data.GraffitiLayerDataObject;
-import com.bfc.wyzgraffitiboard.view.test.GraffitiLayerLogicView;
+import com.bfc.wyzgraffitiboard.view.data.GraffitiLayerData;
 
 /**
  * Created by fishyu on 2018/5/2.
@@ -17,8 +16,7 @@ public abstract class AbstractBaseAnimator implements Animator.AnimatorListener,
 
     protected final String TAG = getClass().getSimpleName();
 
-    protected GraffitiLayerLogicView mLayerView;
-    protected GraffitiLayerDataObject mLayerData;
+    protected Runnable mUpdateViewRunnable;
 
     private ObjectAnimator mAnimator;
 
@@ -28,9 +26,11 @@ public abstract class AbstractBaseAnimator implements Animator.AnimatorListener,
 
     private long mLastUpdateTime = 0;
 
-    public AbstractBaseAnimator(GraffitiLayerDataObject data, GraffitiLayerLogicView view, long duration, float from, float to) {
-        mLayerData = data;
-        mLayerView = view;
+    private GraffitiLayerData mLayerData;
+
+    public AbstractBaseAnimator(GraffitiLayerData layerData, Runnable updateViewRunnable, long duration, float from, float to) {
+        mLayerData = layerData;
+        mUpdateViewRunnable = updateViewRunnable;
 
         mAnimator = ObjectAnimator.ofFloat(AbstractBaseAnimator.this, "value", from, to);
         mAnimator.setDuration(duration);
@@ -93,7 +93,7 @@ public abstract class AbstractBaseAnimator implements Animator.AnimatorListener,
     public void onAnimationStart(Animator animation) {
         Log.v(TAG, "onAnimationStart");
         setValue(0);
-        mLayerData.installAnimator(this);
+        mLayerData.forceDrawAll(false);
     }
 
     @Override
@@ -101,7 +101,6 @@ public abstract class AbstractBaseAnimator implements Animator.AnimatorListener,
         Log.v(TAG, "onAnimationEnd");
         setValue(0);
         notifyView();
-        mLayerData.uninstallAnimator();
     }
 
     @Override
@@ -109,7 +108,6 @@ public abstract class AbstractBaseAnimator implements Animator.AnimatorListener,
         Log.v(TAG, "onAnimationCancel");
         setValue(0);
         notifyView();
-        mLayerData.uninstallAnimator();
     }
 
     @Override
@@ -124,9 +122,22 @@ public abstract class AbstractBaseAnimator implements Animator.AnimatorListener,
         }
     }
 
+    /**
+     * Notify view time to update
+     */
     protected void notifyView() {
         mLastUpdateTime = System.currentTimeMillis();
-        mLayerView.notifyDataChanged();
+        mUpdateViewRunnable.run();
+    }
+
+
+    /**
+     * Getting internal {@link Animator}
+     *
+     * @return
+     */
+    public Animator getAnimator() {
+        return mAnimator;
     }
 
 }

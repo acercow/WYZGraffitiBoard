@@ -1,10 +1,10 @@
-package com.bfc.wyzgraffitiboard.view.test;
+package com.bfc.wyzgraffitiboard.trash.test;
 
 import android.content.Context;
 import android.util.AttributeSet;
 
-import com.bfc.wyzgraffitiboard.view.data.GraffitiLayerDataObject;
 import com.bfc.wyzgraffitiboard.view.GraffitiView;
+import com.bfc.wyzgraffitiboard.view.data.GraffitiLayerData;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,7 +15,7 @@ import java.util.Map;
 
 public class GrafittiLogicView extends GraffitiView {
 
-    private Map<GraffitiLayerDataObject, GraffitiLayerLogicView> mViews = new HashMap<>();
+    private Map<GraffitiLayerData, GraffitiLayerLogicView> mViews = new HashMap<>();
 
     public GrafittiLogicView(Context context) {
         super(context);
@@ -30,7 +30,7 @@ public class GrafittiLogicView extends GraffitiView {
     }
 
     @Override
-    public void notifyDataChanged(GraffitiLayerDataObject layerData) {
+    public void notifyDataChanged(GraffitiLayerData layerData) {
         GraffitiLayerLogicView view = mViews.get(layerData);
         if (view == null) {
             view = new GraffitiLayerLogicView(getContext(), layerData);
@@ -41,12 +41,12 @@ public class GrafittiLogicView extends GraffitiView {
         }
     }
 
-    protected GraffitiLayerLogicViewGroup getLogicViewGroup(GraffitiLayerDataObject layerData) {
-        if (layerData.isMergeAble()) {
+    protected GraffitiLayerLogicViewGroup getLogicViewGroup(GraffitiLayerData layerData) {
+        if (layerData.isMergeAble(layerData)) {
             if (getChildCount() > 0) {
                 GraffitiLayerLogicViewGroup viewGroup = (GraffitiLayerLogicViewGroup) getChildAt(getChildCount() - 1);
                 GraffitiLayerLogicView lastChild = viewGroup.getLastChild();
-                if (lastChild != null && lastChild.getLayerData().isMergeAble()) {
+                if (lastChild != null && lastChild.getLayerData().isMergeAble(layerData)) {
                     return viewGroup;
                 }
             }

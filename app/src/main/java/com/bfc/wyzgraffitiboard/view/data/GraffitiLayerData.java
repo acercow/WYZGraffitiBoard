@@ -3,7 +3,9 @@ package com.bfc.wyzgraffitiboard.view.data;
 import android.util.Log;
 
 import com.bfc.wyzgraffitiboard.bean.GraffitiLayerBean;
+import com.bfc.wyzgraffitiboard.bean.GraffitiNoteBean;
 import com.bfc.wyzgraffitiboard.view.animation.AbstractBaseAnimator;
+import com.bfc.wyzgraffitiboard.view.animation.AnimatorFactory;
 import com.bfc.wyzgraffitiboard.view.coordinates.ICoordinateConverter;
 import com.bfc.wyzgraffitiboard.view.coordinates.SimpleCoordinateConverter;
 
@@ -14,12 +16,11 @@ import java.util.List;
  * Created by fishyu on 2018/4/28.
  * <p>
  * <p>
- * Percentage level
  */
 
-public class GraffitiLayerDataObject {
+public class GraffitiLayerData {
 
-    static final String TAG = GraffitiLayerDataObject.class.getSimpleName();
+    static final String TAG = GraffitiLayerData.class.getSimpleName();
 
     private GraffitiLayerBean mLayerBean;
 
@@ -31,7 +32,7 @@ public class GraffitiLayerDataObject {
 
     private float mNoteDistance;
 
-    private List<GraffitiNoteDataObject> mNotes = new ArrayList<>();
+    private List<GraffitiNoteData> mNotes = new ArrayList<>();
 
     public static final int MASK_REDRAW = 0x00000011;
 
@@ -43,7 +44,7 @@ public class GraffitiLayerDataObject {
     AbstractBaseAnimator mAnimator; // 是否有动画
     ICoordinateConverter mCoordinateConverter;
 
-    public GraffitiLayerDataObject(GraffitiLayerBean layerBean) {
+    public GraffitiLayerData(GraffitiLayerBean layerBean) {
         if (layerBean == null) {
             throw new IllegalArgumentException("Must support a valid GraffitiLayerBean");
         }
@@ -55,15 +56,16 @@ public class GraffitiLayerDataObject {
      *
      * @param viewWidth
      * @param viewHeight
+     * @return any {@link GraffitiNoteData} has been added from {@link GraffitiLayerBean}
      */
-    public void initialize(float viewWidth, float viewHeight) {
+    public boolean installView(float viewWidth, float viewHeight) {
         if (viewWidth <= 0 || viewHeight <= 0) {
             throw new IllegalArgumentException("viewWidth or viewHeight must > 0, viewWidth -> " + viewWidth + " viewHeight -> " + viewHeight);
         }
 
         if (viewWidth == mCanvasWidth && viewHeight == mCanvasHeight) {
-            //init already
-            return;
+            //installData already
+            return false;
         }
 
         mCoordinateConverter = new SimpleCoordinateConverter(mLayerBean.getPercentageCanvasWidth(), mLayerBean.getPercentageCanvasHeight(), viewWidth, viewHeight);
@@ -75,20 +77,47 @@ public class GraffitiLayerDataObject {
         mNoteHeight = mCoordinateConverter.convertHeightPercentageToPixel(mLayerBean.getPercentageNoteHeight());
         mNoteDistance = mCoordinateConverter.convertHeightPercentageToPixel(mLayerBean.getPercentageNoteDistance());
 
-        Log.e(TAG, "initialized... \n" + this.toString());
+        // GraffitiNoteData can only been initialized after view installed
 
+        Log.e(TAG, "initialized... \n" + this.toString());
+        return true;
     }
 
+
     /**
-     * Total points
+     * Cooperate with {@link GraffitiData#isShowMode()}.
      *
      * @return
      */
-    public int getCount() {
-        return mNotes == null ? 0 : mNotes.size();
+    public boolean isShowMode() {
+        return mLayerBean.getNotes() != null && mLayerBean.getNotes().size() > 0;
     }
 
-    public List<GraffitiNoteDataObject> getNotes() {
+
+    /**
+     * Install notes
+     */
+    public void installNotes() {
+        if (isShowMode()) {
+            for (GraffitiNoteBean noteBean : mLayerBean.getNotes()) {
+                GraffitiNoteData noteData = new GraffitiNoteData(this, noteBean);
+                mNotes.add(noteData);
+            }
+        }
+    }
+
+    /**
+     * installView animator
+     *
+     * @param updateRunnable
+     */
+    public void installAnimator(Runnable updateRunnable) {
+        if (isHasAnimation()) {
+            mAnimator = AnimatorFactory.create(this, updateRunnable);
+        }
+    }
+
+    public List<GraffitiNoteData> getNotes() {
         return mNotes;
     }
 
@@ -97,8 +126,8 @@ public class GraffitiLayerDataObject {
      *
      * @return
      */
-    public GraffitiNoteDataObject getLast() {
-        if (getCount() > 0) {
+    public GraffitiNoteData getLast() {
+        if (mNotes.size() > 0) {
             return mNotes.get(mNotes.size() - 1);
         }
         return null;
@@ -128,15 +157,26 @@ public class GraffitiLayerDataObject {
         return mLayerBean.getNoteDrawableRes();
     }
 
-    public boolean isMergeAble() {
-        return !isHasAnimation();
+
+    /**
+     * Getting internal {@link GraffitiLayerBean}
+     *
+     * @return
+     */
+    public GraffitiLayerBean getGraffitiLayerBean() {
+        return mLayerBean;
+    }
+
+    @Deprecated
+    public boolean isMergeAble(GraffitiLayerData layerData) {
+        return !isHasAnimation() && mLayerBean.equals(layerData.getGraffitiLayerBean());
     }
 
     public boolean isHasAnimation() {
         return mLayerBean.getAnimation() > 0;
     }
 
-    public void addNote(GraffitiNoteDataObject note) {
+    public void addNote(GraffitiNoteData note) {
         if (note == null || mNotes.contains(note)) {
             return;
         }
@@ -148,7 +188,7 @@ public class GraffitiLayerDataObject {
      *
      * @param notes
      */
-    public boolean addNote(List<GraffitiNoteDataObject> notes) {
+    public boolean addNote(List<GraffitiNoteData> notes) {
         if (notes == null || notes.size() < 0) {
             return false;
         }
@@ -156,32 +196,21 @@ public class GraffitiLayerDataObject {
         return true;
     }
 
-
-    public void installAnimator(AbstractBaseAnimator animator) {
-        mAnimator = animator;
-        setFlag(MASK_REDRAW, FLAG_REDRAW_ALL | ~FLAG_REDRAW_ONCE);
-    }
-
-    public void uninstallAnimator() {
-        mAnimator = null;
-        setFlag(MASK_REDRAW, FLAG_REDRAW_ALL | FLAG_REDRAW_ONCE);
-    }
-
-
-    public boolean isForceDrawAll() {
-        return (mFlag & FLAG_REDRAW_ALL) == 1;
+    protected void setFlag(int mask, int flag) {
+        mFlag = (mFlag & ~mask) | flag;
     }
 
     /**
-     * Force draw all
-     * <p>
-     * See {@link #FLAG_REDRAW_ONCE}, {@link #FLAG_REDRAW_ALL}
+     * Force draw all notes
      *
-     * @param mask
-     * @param flag
+     * @param onlyOnce
      */
-    public void setFlag(int mask, int flag) {
-        mFlag = (mFlag & ~mask) | flag;
+    public void forceDrawAll(boolean onlyOnce) {
+        if (onlyOnce) {
+            setFlag(MASK_REDRAW, FLAG_REDRAW_ALL | FLAG_REDRAW_ONCE);
+        } else {
+            setFlag(MASK_REDRAW, FLAG_REDRAW_ALL | ~FLAG_REDRAW_ONCE);
+        }
     }
 
     /**
@@ -193,15 +222,50 @@ public class GraffitiLayerDataObject {
         }
     }
 
+
+    public void startAnimatorIfExits() {
+        if (mAnimator != null) {
+            mAnimator.start();
+        }
+    }
+
+    public void stopAnimatorIfExits() {
+        if (mAnimator != null) {
+            mAnimator.stop();
+        }
+    }
+
+    /**
+     * Is forcing drawing all
+     *
+     * @return
+     */
+    public boolean isForceDrawAll() {
+        return (mFlag & FLAG_REDRAW_ALL) == 1;
+    }
+
     @Override
     public String toString() {
         return "[" +
+                "mLayerBean:" + mLayerBean +
                 "mCanvasWidth:" + mCanvasWidth +
                 ",mCanvasHeight:" + mCanvasHeight +
                 ",mNoteWidth:" + mNoteWidth +
                 ",mNoteHeight:" + mNoteHeight +
                 ",mNoteDistance:" + mNoteDistance +
+                ",mNotes:" + mNotes +
+                ",mCoordinateConverter:" + mCoordinateConverter +
+                ",mAnimator:" + mAnimator +
                 "]";
+    }
+
+    /**
+     * Getting {@link ICoordinateConverter}
+     *
+     * @return
+     */
+    public ICoordinateConverter getCoordinateConverter() {
+        return mCoordinateConverter;
     }
 
 }

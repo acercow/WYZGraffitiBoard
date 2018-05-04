@@ -2,8 +2,8 @@ package com.bfc.wyzgraffitiboard.view.calculator;
 
 import android.util.Log;
 
-import com.bfc.wyzgraffitiboard.view.data.GraffitiLayerDataObject;
-import com.bfc.wyzgraffitiboard.view.data.GraffitiNoteDataObject;
+import com.bfc.wyzgraffitiboard.view.data.GraffitiLayerData;
+import com.bfc.wyzgraffitiboard.view.data.GraffitiNoteData;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,16 +19,16 @@ public class SimpleNextNoteCalculator implements INextNoteCalculator {
     /**
      * 优化内存，用于返回 数据
      */
-    private List<GraffitiNoteDataObject> mPool = new ArrayList<>();
+    private List<GraffitiNoteData> mPool = new ArrayList<>();
 
     public SimpleNextNoteCalculator() {
 
     }
 
     @Override
-    public List<GraffitiNoteDataObject> next(GraffitiLayerDataObject layer, GraffitiNoteDataObject relative, float x, float y) {
+    public List<GraffitiNoteData> next(GraffitiLayerData layer, GraffitiNoteData relative, float x, float y) {
         if (relative == null) {
-            GraffitiNoteDataObject note = new GraffitiNoteDataObject(layer, x, y);
+            GraffitiNoteData note = new GraffitiNoteData(layer, x, y);
             Log.e(TAG, "add note -> " + note);
             mPool.clear();
             mPool.add(note);
@@ -44,7 +44,7 @@ public class SimpleNextNoteCalculator implements INextNoteCalculator {
                 float gapX = (x - lastX) / ratio;
                 float gapY = (y - lastY) / ratio;
                 for (int i = 1; i <= ratio; i++) {
-                    GraffitiNoteDataObject note = new GraffitiNoteDataObject(layer, lastX + gapX - layer.getNoteWidth(), lastY + gapY - layer.getNoteHeight());
+                    GraffitiNoteData note = new GraffitiNoteData(layer, lastX + gapX - layer.getNoteWidth(), lastY + gapY - layer.getNoteHeight());
                     Log.e(TAG, "add note -> " + note);
                     mPool.add(note);
                 }

@@ -1,7 +1,7 @@
 package com.bfc.wyzgraffitiboard.view.calculator;
 
-import com.bfc.wyzgraffitiboard.view.data.GraffitiLayerDataObject;
-import com.bfc.wyzgraffitiboard.view.data.GraffitiNoteDataObject;
+import com.bfc.wyzgraffitiboard.view.data.GraffitiLayerData;
+import com.bfc.wyzgraffitiboard.view.data.GraffitiNoteData;
 
 import java.util.List;
 
@@ -19,7 +19,7 @@ public interface INextNoteCalculator {
      * @param relative
      * @return
      */
-    List<GraffitiNoteDataObject> next(GraffitiLayerDataObject layer, GraffitiNoteDataObject relative, float x, float y);
+    List<GraffitiNoteData> next(GraffitiLayerData layer, GraffitiNoteData relative, float x, float y);
 
 
 }

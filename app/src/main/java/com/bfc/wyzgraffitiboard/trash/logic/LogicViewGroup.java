@@ -1,4 +1,4 @@
-package com.bfc.wyzgraffitiboard.view.logic;
+package com.bfc.wyzgraffitiboard.trash.logic;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -6,6 +6,8 @@ import android.view.View;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import hugo.weaving.DebugLog;
 
 /**
  * Created by fishyu on 2018/5/2.
@@ -88,11 +90,12 @@ public class LogicViewGroup extends View {
         }
     }
 
+    @DebugLog
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         for (LogicView view : mChildren) {
-            if (view.invalidated()) {
+            if (view.invalidated() || true) {
                 view.onDraw(canvas);
             }
         }

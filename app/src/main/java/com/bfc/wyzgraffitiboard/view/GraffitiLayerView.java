@@ -3,19 +3,13 @@ package com.bfc.wyzgraffitiboard.view;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.BitmapShader;
 import android.graphics.Canvas;
-import android.graphics.Matrix;
-import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.RectF;
-import android.graphics.Shader;
 import android.util.Log;
 import android.view.View;
 
-import com.bfc.wyzgraffitiboard.view.animation.AbstractBaseAnimator;
-import com.bfc.wyzgraffitiboard.view.data.GraffitiLayerDataObject;
-import com.bfc.wyzgraffitiboard.view.data.GraffitiNoteDataObject;
+import com.bfc.wyzgraffitiboard.view.data.GraffitiLayerData;
+import com.bfc.wyzgraffitiboard.view.data.GraffitiNoteData;
 
 /**
  * Created by fishyu on 2018/4/28.
@@ -27,35 +21,21 @@ public class GraffitiLayerView extends View {
 
     static final String TAG = GraffitiLayerView.class.getSimpleName();
 
-    private Path mPath;
-    private Paint mPaint;
-    private Bitmap mBitmap;
-    private Canvas mCanvas;
     private Bitmap mGiftIcon;
-    private float mProportion;
-    private Matrix mMatrix;
+    private int mBlankCanvas = -1;
 
-    public GraffitiLayerView(Context context, GraffitiLayerDataObject data) {
+    public GraffitiLayerView(Context context, GraffitiLayerData data) {
         super(context);
-        initDrawParams();
         setTag(data);
         mGiftIcon = BitmapFactory.decodeResource(getResources(), data.getNoteDrawableRes());
 
-        if (getLayerData().isHasAnimation()) {
-//            mAnimator = AnimatorFactory.create(getLayerData(), this);
-        }
-    }
-
-
-    private void initDrawParams() {
-        mPaint = new Paint();
-        mPaint.setAntiAlias(true);
-        mPaint.setStrokeWidth(10);
-        mPath = new Path();
-        BitmapShader bitmapShader = new BitmapShader(mGiftIcon, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
-//        mPaint.setShader(bitmapShader);
-        mPaint.setStyle(Paint.Style.STROKE);
-        mPaint.setColor(0xFF992277);
+        // installView animator
+        getLayerData().installAnimator(new Runnable() {
+            @Override
+            public void run() {
+                notifyDataChanged();
+            }
+        });
     }
 
 
@@ -64,8 +44,8 @@ public class GraffitiLayerView extends View {
      *
      * @return
      */
-    public GraffitiLayerDataObject getLayerData() {
-        return (GraffitiLayerDataObject) getTag();
+    public GraffitiLayerData getLayerData() {
+        return (GraffitiLayerData) getTag();
     }
 
 
@@ -80,51 +60,59 @@ public class GraffitiLayerView extends View {
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
-        if (w >= 0 && h >= 0) {
-            getLayerData().initialize(w, h);
+        if (w != oldw || h != oldh) {
+            if (w >= 0 && h >= 0) {
+                if (getLayerData().installView(w, h)) {
+                    if (getLayerData().isShowMode()) {
+                        getLayerData().installNotes();
+                        notifyDataChanged();
+                    }
+                }
+            }
         }
     }
-
-
-    private AbstractBaseAnimator mAnimator;
 
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
-        if (mAnimator != null) {
-            mAnimator.start();
-        }
+        getLayerData().startAnimatorIfExits();
     }
 
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
-        if (mAnimator != null) {
-            mAnimator.stop();
+        getLayerData().stopAnimatorIfExits();
+    }
+
+    @Override
+    protected void onWindowVisibilityChanged(int visibility) {
+        super.onWindowVisibilityChanged(visibility);
+        if (visibility == VISIBLE) {
+            getLayerData().startAnimatorIfExits();
+        } else {
+            getLayerData().stopAnimatorIfExits();
         }
     }
 
-    private int mBlankCanvas = -1;
-
+    /**
+     * @param canvas
+     */
+    //    @DebugLog
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        if (mBlankCanvas <= 0) {
-            mBlankCanvas = canvas.save();
-            Log.e(TAG, " mBlankCanvas -> " + mBlankCanvas);
-        }
-
+        Log.e(TAG + this, "onDraw");
         if (getLayerData().isForceDrawAll()) {
             //TODO clean the canvas ??
             Log.e(TAG, " restore canvas to -> " + mBlankCanvas);
-            canvas.restoreToCount(mBlankCanvas);
         }
 
-        int size = getLayerData().getCount();
+        int size = getLayerData().getNotes().size();
         for (int i = size - 1; i >= 0; i--) {
-            GraffitiNoteDataObject note = getLayerData().getNotes().get(i);
+            GraffitiNoteData note = getLayerData().getNotes().get(i);
+            note.mDrawn = false;
             if (note.mDrawn && !getLayerData().isForceDrawAll()) {
-                return;
+                break;
             }
             drawNote(canvas, note);
             note.mDrawn = true;
@@ -140,17 +128,21 @@ public class GraffitiLayerView extends View {
      * @param canvas
      * @param note   Note information
      */
-    protected void drawNote(Canvas canvas, GraffitiNoteDataObject note) {
-        Log.v(TAG, "drawNote note -> " + note);
-        onDrawNote(canvas, mGiftIcon, note.getCalculateRectF(), note);
+    protected void drawNote(Canvas canvas, GraffitiNoteData note) {
+        onDrawNote(canvas, note, mGiftIcon, note.getCalculateRectF());
     }
 
 
-    protected void onDrawNote(Canvas canvas, Bitmap bitmap, RectF rectF, GraffitiNoteDataObject note) {
-        Log.v(TAG, "onDrawNote rectF -> " + rectF + " bitmap -> " + bitmap);
-
-        rectF = new RectF(500, 500, 100, 100);
-
+    /**
+     * Do what u want to draw your note
+     *
+     * @param canvas
+     * @param note
+     * @param bitmap
+     * @param rectF
+     */
+    protected void onDrawNote(Canvas canvas, GraffitiNoteData note, Bitmap bitmap, RectF rectF) {
+//        Log.v(TAG, "onDrawNote rectF -> " + rectF + " bitmap -> " + bitmap);
         canvas.drawBitmap(bitmap, null, rectF, null);
     }
 

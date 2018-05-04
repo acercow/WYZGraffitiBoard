@@ -1,4 +1,4 @@
-package com.bfc.wyzgraffitiboard.view.logic;
+package com.bfc.wyzgraffitiboard.trash.logic;
 
 import android.content.Context;
 import android.graphics.Canvas;

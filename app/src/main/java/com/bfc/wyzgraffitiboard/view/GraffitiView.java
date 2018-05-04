@@ -1,16 +1,20 @@
 package com.bfc.wyzgraffitiboard.view;
 
 import android.content.Context;
+import android.graphics.Canvas;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.bfc.wyzgraffitiboard.bean.GraffitiLayerBean;
 import com.bfc.wyzgraffitiboard.view.calculator.INextNoteCalculator;
 import com.bfc.wyzgraffitiboard.view.calculator.SimpleNextNoteCalculator;
-import com.bfc.wyzgraffitiboard.view.data.GraffitiDataObject;
-import com.bfc.wyzgraffitiboard.view.data.GraffitiLayerDataObject;
+import com.bfc.wyzgraffitiboard.view.data.GraffitiData;
+import com.bfc.wyzgraffitiboard.view.data.GraffitiLayerData;
+
+import hugo.weaving.DebugLog;
 
 /**
  * Created by fishyu on 2018/4/28.
@@ -21,9 +25,8 @@ public class GraffitiView extends ViewGroup {
 
     private INextNoteCalculator mNoteCalculator;
 
-    private GraffitiDataObject mGraffitiData;
-
-    private GraffitiLayerDataObject mDrawingLayer;
+    private GraffitiData mGraffitiData;
+    private GraffitiLayerData mDrawingLayer;
 
     public GraffitiView(Context context) {
         super(context);
@@ -37,24 +40,33 @@ public class GraffitiView extends ViewGroup {
         super(context, attrs, defStyleAttr);
     }
 
-
     /**
      * 初始化，GraffitiData 带有配置参数，做相应配置
      *
      * @param initData
      */
-    public void init(GraffitiDataObject initData) {
+    public void installData(GraffitiData initData) {
         if (initData == null) {
-            initData = GraffitiDataObject.generateDefault();
+            initData = GraffitiData.generateDefault();
         }
         mNoteCalculator = new SimpleNextNoteCalculator();
         mGraffitiData = initData;
 
-        //TODO when reading exits
+        if (initData.isShowMode()) {
+            post(new Runnable() {
+                @Override
+                public void run() {
+                    notifyDataChanged();
+                }
+            });
+        }
 
+        //TODO when reading exits
         mDrawingLayer = null;
     }
 
+
+    @DebugLog
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         // square this view
@@ -69,6 +81,8 @@ public class GraffitiView extends ViewGroup {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
     }
 
+
+    @DebugLog
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
@@ -78,8 +92,14 @@ public class GraffitiView extends ViewGroup {
      * 1, Update data <br>
      * 2, Notify view updating
      */
+    @DebugLog
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        if (mGraffitiData.isShowMode()) {
+            Log.e(TAG, "player mode, just show notes");
+            return super.onTouchEvent(event);
+        }
+
         if (getMeasuredHeight() == 0 || getMeasuredWidth() == 0) {
             Log.e(TAG, "width or height is 0, getMeasuredWidth() -> " + getMeasuredWidth() + " getMeasuredHeight() -> " + getMeasuredHeight());
             return super.onTouchEvent(event);
@@ -94,14 +114,12 @@ public class GraffitiView extends ViewGroup {
                 if (mDrawingLayer != null) {
                     throw new RuntimeException("How could mDrawingLayer not be null !");
                 }
-                mDrawingLayer = mGraffitiData.getDrawingLayer();
-                mDrawingLayer.initialize(getMeasuredWidth(), getMeasuredHeight());
-                mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, null, pointX, pointY));
-                notifyDataChanged(mDrawingLayer);
-                return true;
+                mDrawingLayer = mGraffitiData.getDrawingLayer(getCurrentGraffitiLayerBean());
+                mDrawingLayer.installView(getMeasuredWidth(), getMeasuredHeight());
             case MotionEvent.ACTION_MOVE:
-                mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY));
-                notifyDataChanged(mDrawingLayer);
+                if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY))) {
+                    notifyDataChanged(mDrawingLayer);
+                }
                 return true;
 
             case MotionEvent.ACTION_UP:
@@ -115,6 +133,7 @@ public class GraffitiView extends ViewGroup {
         }
     }
 
+    @DebugLog
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         int count = getChildCount();
@@ -124,25 +143,79 @@ public class GraffitiView extends ViewGroup {
         }
     }
 
+    @DebugLog
+    @Override
+    public void draw(Canvas canvas) {
+        super.draw(canvas);
+    }
+
+
+    @DebugLog
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+    }
+
     /**
-     * @param data
+     * Notify data changed, time to update view
      */
-    public void notifyDataChanged(GraffitiDataObject data) {
-        for (GraffitiLayerDataObject layerData : data.getLayers()) {
-            notifyDataChanged(data);
+    public void notifyDataChanged() {
+        GraffitiData data = mGraffitiData;
+        //check view deleted
+        int childCount = getChildCount();
+        for (int i = 0; i < childCount; i++) {
+            View view = getChildAt(i);
+            if (!data.getLayers().contains(view.getTag())) {
+                notifyDataChanged((GraffitiLayerData) view.getTag());
+            }
+        }
+
+        for (GraffitiLayerData layerData : data.getLayers()) {
+            notifyDataChanged(layerData);
         }
     }
 
-    public void notifyDataChanged(GraffitiLayerDataObject layerData) {
+    /**
+     * Notify data changed, time to update view
+     *
+     * @param layerData
+     */
+    public void notifyDataChanged(GraffitiLayerData layerData) {
+        boolean deleted = !mGraffitiData.getLayers().contains(layerData);
         GraffitiLayerView view = findViewWithTag(layerData);
         if (view == null) {
-            view = new GraffitiLayerView(getContext(), layerData);
-            view.setTag(layerData);
-            addView(view);
+            if (!deleted) {
+                view = new GraffitiLayerView(getContext(), layerData);
+                view.setTag(layerData);
+                addView(view);
+            }
         } else {
-            view.notifyDataChanged();
+            if (deleted) {
+                removeView(view);
+            } else {
+                view.notifyDataChanged();
+            }
         }
     }
 
+
+    /**
+     * Returning selected {@link GraffitiLayerBean}
+     *
+     * @return
+     */
+    protected GraffitiLayerBean getCurrentGraffitiLayerBean() {
+        return GraffitiLayerBean.buildTest();
+    }
+
+
+    /**
+     * Getting internal {@link GraffitiData} witch drives {@link GraffitiView}.
+     *
+     * @return
+     */
+    public GraffitiData getGraffitiData() {
+        return mGraffitiData;
+    }
 
 }

@@ -1,4 +1,4 @@
-package com.bfc.wyzgraffitiboard.view.test;
+package com.bfc.wyzgraffitiboard.trash.test;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -12,11 +12,11 @@ import android.graphics.RectF;
 import android.graphics.Shader;
 import android.util.Log;
 
-import com.bfc.wyzgraffitiboard.view.animation.AbstractBaseAnimator;
-import com.bfc.wyzgraffitiboard.view.animation.AnimatorFactory;
-import com.bfc.wyzgraffitiboard.view.data.GraffitiLayerDataObject;
-import com.bfc.wyzgraffitiboard.view.data.GraffitiNoteDataObject;
-import com.bfc.wyzgraffitiboard.view.logic.LogicView;
+import com.bfc.wyzgraffitiboard.trash.logic.LogicView;
+import com.bfc.wyzgraffitiboard.view.data.GraffitiLayerData;
+import com.bfc.wyzgraffitiboard.view.data.GraffitiNoteData;
+
+import hugo.weaving.DebugLog;
 
 /**
  * Created by fishyu on 2018/4/28.
@@ -26,7 +26,7 @@ import com.bfc.wyzgraffitiboard.view.logic.LogicView;
  */
 public class GraffitiLayerLogicView extends LogicView {
 
-    private GraffitiLayerDataObject mLayerData;
+    private GraffitiLayerData mLayerData;
 
     private Path mPath;
     private Paint mPaint;
@@ -36,7 +36,7 @@ public class GraffitiLayerLogicView extends LogicView {
     private float mProportion;
     private Matrix mMatrix;
 
-    public GraffitiLayerLogicView(Context context, GraffitiLayerDataObject data) {
+    public GraffitiLayerLogicView(Context context, GraffitiLayerData data) {
         super(context);
         mLayerData = data;
 
@@ -45,7 +45,12 @@ public class GraffitiLayerLogicView extends LogicView {
         initDrawParams();
 
         if (getLayerData().isHasAnimation()) {
-            mAnimator = AnimatorFactory.create(getLayerData(), this);
+            getLayerData().installAnimator(new Runnable() {
+                @Override
+                public void run() {
+                    notifyDataChanged();
+                }
+            });
         }
     }
 
@@ -67,7 +72,7 @@ public class GraffitiLayerLogicView extends LogicView {
      *
      * @return
      */
-    public GraffitiLayerDataObject getLayerData() {
+    public GraffitiLayerData getLayerData() {
         return mLayerData;
     }
 
@@ -84,32 +89,25 @@ public class GraffitiLayerLogicView extends LogicView {
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
         if (w >= 0 && h >= 0) {
-            getLayerData().initialize(w, h);
+            getLayerData().installView(w, h);
         }
     }
-
-
-    private AbstractBaseAnimator mAnimator;
 
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
-
-        if (mAnimator != null) {
-            mAnimator.start();
-        }
+        getLayerData().startAnimatorIfExits();
     }
 
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
-        if (mAnimator != null) {
-            mAnimator.stop();
-        }
+        getLayerData().stopAnimatorIfExits();
     }
 
     private int mBlankCanvas = -1;
 
+    @DebugLog
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
@@ -124,9 +122,9 @@ public class GraffitiLayerLogicView extends LogicView {
             canvas.restoreToCount(mBlankCanvas);
         }
 
-        int size = getLayerData().getCount();
+        int size = getLayerData().getNotes().size();
         for (int i = size - 1; i >= 0; i--) {
-            GraffitiNoteDataObject note = getLayerData().getNotes().get(i);
+            GraffitiNoteData note = getLayerData().getNotes().get(i);
             note.mDrawn = false;
             if (note.mDrawn && !getLayerData().isForceDrawAll()) {
                 return;
@@ -147,13 +145,13 @@ public class GraffitiLayerLogicView extends LogicView {
      * @param canvas
      * @param note   Note information
      */
-    protected void drawNote(Canvas canvas, GraffitiNoteDataObject note) {
+    protected void drawNote(Canvas canvas, GraffitiNoteData note) {
         Log.v(TAG, "drawNote note -> " + note);
         onDrawNote(canvas, mGiftIcon, note.getCalculateRectF(), note);
     }
 
 
-    protected void onDrawNote(Canvas canvas, Bitmap bitmap, RectF rectF, GraffitiNoteDataObject note) {
+    protected void onDrawNote(Canvas canvas, Bitmap bitmap, RectF rectF, GraffitiNoteData note) {
         Log.e(TAG, "onDrawNote rectF -> " + rectF + " bitmap -> " + bitmap);
         canvas.drawBitmap(bitmap, null, rectF, null);
     }

@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'com.jakewharton.hugo'
 
 android {
     compileSdkVersion 26
@@ -30,4 +31,6 @@ dependencies {
     compile 'com.google.dagger:dagger-android-support:2.11-rc2'
 
     compile 'com.android.support:recyclerview-v7:26.+'
+
+    compile 'com.google.code.gson:gson:2.8.4'
 }
