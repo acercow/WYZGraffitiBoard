@@ -5,7 +5,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.RectF;
-import android.util.Log;
 import android.view.View;
 
 import com.sina.weibo.view.graffitiview.data.GraffitiLayerData;
@@ -82,6 +81,13 @@ public class GraffitiLayerView extends View {
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
         getLayerData().stopAnimatorIfExits();
+        if (mGiftIcon != null && !mGiftIcon.isRecycled()) {
+            try {
+                mGiftIcon.recycle();
+            } catch (Error e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     @Override
@@ -97,14 +103,12 @@ public class GraffitiLayerView extends View {
     /**
      * @param canvas
      */
-    //    @DebugLog
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        Log.e(TAG + this, "onDraw");
         if (getLayerData().isForceDrawAll()) {
             //TODO clean the canvas ??
-            Log.e(TAG, " restore canvas to -> " + mBlankCanvas);
+//            Log.e(TAG, " restore canvas to -> " + mBlankCanvas);
         }
 
         int size = getLayerData().getNotes().size();

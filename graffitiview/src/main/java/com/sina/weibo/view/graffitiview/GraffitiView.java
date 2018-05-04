@@ -14,8 +14,6 @@ import com.sina.weibo.view.graffitiview.calculator.SimpleNextNoteCalculator;
 import com.sina.weibo.view.graffitiview.data.GraffitiData;
 import com.sina.weibo.view.graffitiview.data.GraffitiLayerData;
 
-import hugo.weaving.DebugLog;
-
 /**
  * Created by fishyu on 2018/4/28.
  */
@@ -27,6 +25,8 @@ public class GraffitiView extends ViewGroup {
 
     private GraffitiData mGraffitiData;
     private GraffitiLayerData mDrawingLayer;
+
+    private GraffitiLayerBean mDrawObject;
 
     public GraffitiView(Context context) {
         super(context);
@@ -66,7 +66,6 @@ public class GraffitiView extends ViewGroup {
     }
 
 
-    @DebugLog
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         // square this view
@@ -82,7 +81,6 @@ public class GraffitiView extends ViewGroup {
     }
 
 
-    @DebugLog
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
@@ -92,7 +90,6 @@ public class GraffitiView extends ViewGroup {
      * 1, Update data <br>
      * 2, Notify view updating
      */
-    @DebugLog
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (mGraffitiData.isShowMode()) {
@@ -105,6 +102,11 @@ public class GraffitiView extends ViewGroup {
             return super.onTouchEvent(event);
         }
 
+        if (getCurrentDrawObject() == null) {
+            Log.e(TAG, "no GraffitiLayerBean set, nothing to draw.");
+            return super.onTouchEvent(event);
+        }
+
         final float pointX = event.getX();
         final float pointY = event.getY();
 
@@ -114,7 +116,7 @@ public class GraffitiView extends ViewGroup {
                 if (mDrawingLayer != null) {
                     throw new RuntimeException("How could mDrawingLayer not be null !");
                 }
-                mDrawingLayer = mGraffitiData.getDrawingLayer(getCurrentGraffitiLayerBean());
+                mDrawingLayer = mGraffitiData.getDrawingLayer(getCurrentDrawObject());
                 mDrawingLayer.installView(getMeasuredWidth(), getMeasuredHeight());
             case MotionEvent.ACTION_MOVE:
                 if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY))) {
@@ -133,7 +135,6 @@ public class GraffitiView extends ViewGroup {
         }
     }
 
-    @DebugLog
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         int count = getChildCount();
@@ -143,14 +144,12 @@ public class GraffitiView extends ViewGroup {
         }
     }
 
-    @DebugLog
     @Override
     public void draw(Canvas canvas) {
         super.draw(canvas);
     }
 
 
-    @DebugLog
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
@@ -204,8 +203,17 @@ public class GraffitiView extends ViewGroup {
      *
      * @return
      */
-    protected GraffitiLayerBean getCurrentGraffitiLayerBean() {
-        return GraffitiLayerBean.buildTest();
+    protected GraffitiLayerBean getCurrentDrawObject() {
+        return mDrawObject;
+    }
+
+    /**
+     * Setting {@link GraffitiLayerBean}, with witch to draw.
+     *
+     * @param layerBean
+     */
+    public void setDrawObject(GraffitiLayerBean layerBean) {
+        mDrawObject = layerBean;
     }
 
 

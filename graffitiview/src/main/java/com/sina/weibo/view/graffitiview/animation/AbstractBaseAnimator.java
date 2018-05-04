@@ -4,9 +4,14 @@ import android.animation.Animator;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.graphics.RectF;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 
 import com.sina.weibo.view.graffitiview.data.GraffitiLayerData;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by fishyu on 2018/5/2.
@@ -14,9 +19,64 @@ import com.sina.weibo.view.graffitiview.data.GraffitiLayerData;
 
 public abstract class AbstractBaseAnimator implements Animator.AnimatorListener, ValueAnimator.AnimatorUpdateListener {
 
+    /**
+     * Awake all updateView Runnable  at same time-line for better preference ?
+     * <p>
+     * With GPU profiler, this align clock seems have no apparent improvement.
+     */
+    private static final class InternalAlignClock extends Handler {
+
+        private List<Runnable> mRunnables = new ArrayList<>();
+
+
+        private boolean mRunning = false;
+
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+
+            int size = mRunnables.size();
+
+            if (size <= 0) {
+                mRunning = false;
+                return;
+            }
+
+            mRunning = true;
+            for (int i = 0; i < size; i++) {
+                Runnable runnable = mRunnables.get(i);
+                runnable.run();
+            }
+
+            heartBeat(true);
+        }
+
+        void heartBeat(boolean delay) {
+            sendEmptyMessageDelayed(0, delay ? ANIMATION_FRAME_TIME : 0);
+        }
+
+        public void start(Runnable runnable) {
+            if (!mRunnables.contains(runnable)) {
+                mRunnables.add(runnable);
+            }
+            if (!mRunning) {
+                heartBeat(false);
+            }
+        }
+
+        public void stop(Runnable runnable) {
+            mRunnables.remove(runnable);
+        }
+    }
+
     protected final String TAG = getClass().getSimpleName();
 
     protected Runnable mUpdateViewRunnable;
+
+
+    static final boolean ENABLE_ALIGN_CLOCK = false;
+
+    static InternalAlignClock mClock = ENABLE_ALIGN_CLOCK ? new InternalAlignClock() : null;
 
     private ObjectAnimator mAnimator;
 
@@ -55,9 +115,7 @@ public abstract class AbstractBaseAnimator implements Animator.AnimatorListener,
      * Stop animation
      */
     public final void stop() {
-        if (mAnimator != null) {
-            mAnimator.cancel();
-        }
+        mAnimator.cancel();
     }
 
 
@@ -94,6 +152,9 @@ public abstract class AbstractBaseAnimator implements Animator.AnimatorListener,
         Log.v(TAG, "onAnimationStart");
         setValue(0);
         mLayerData.forceDrawAll(false);
+        if (mClock != null) {
+            mClock.start(mUpdateViewRunnable);
+        }
     }
 
     @Override
@@ -101,6 +162,9 @@ public abstract class AbstractBaseAnimator implements Animator.AnimatorListener,
         Log.v(TAG, "onAnimationEnd");
         setValue(0);
         notifyView();
+        if (mClock != null) {
+            mClock.stop(mUpdateViewRunnable);
+        }
     }
 
     @Override
@@ -108,18 +172,23 @@ public abstract class AbstractBaseAnimator implements Animator.AnimatorListener,
         Log.v(TAG, "onAnimationCancel");
         setValue(0);
         notifyView();
+        if (mClock != null) {
+            mClock.stop(mUpdateViewRunnable);
+        }
     }
 
     @Override
     public void onAnimationRepeat(Animator animation) {
-        Log.v(TAG, "onAnimationRepeat");
     }
 
     @Override
     public void onAnimationUpdate(ValueAnimator animation) {
-        if (System.currentTimeMillis() - mLastUpdateTime >= ANIMATION_FRAME_TIME) {
-            notifyView();
+        if (mClock == null) {
+            if (System.currentTimeMillis() - mLastUpdateTime >= ANIMATION_FRAME_TIME) {
+                notifyView();
+            }
         }
+
     }
 
     /**

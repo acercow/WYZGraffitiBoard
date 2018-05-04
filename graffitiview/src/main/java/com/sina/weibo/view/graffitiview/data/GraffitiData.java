@@ -85,7 +85,6 @@ public class GraffitiData {
         mLayers.add(data);
     }
 
-
     /**
      * Removing layer
      *
@@ -93,6 +92,19 @@ public class GraffitiData {
      */
     public void removeLayer(GraffitiLayerData data) {
         mLayers.remove(data);
+    }
+
+
+    /**
+     * Removing last one
+     *
+     * @return
+     */
+    public GraffitiLayerData removeLastLayer() {
+        if (mLayers != null && mLayers.size() > 0) {
+            return mLayers.remove(mLayers.size() - 1);
+        }
+        return null;
     }
 
     public List<GraffitiLayerData> getLayers() {

@@ -8,6 +8,7 @@ import android.view.View;
 
 import com.sina.weibo.view.graffitiview.GraffitiView;
 import com.sina.weibo.view.graffitiview.bean.GraffitiBean;
+import com.sina.weibo.view.graffitiview.bean.GraffitiLayerBean;
 import com.sina.weibo.view.graffitiview.data.GraffitiData;
 
 import org.json.JSONException;
@@ -33,6 +34,10 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
         }
 
         mGraffitiView.installData(graffitiData);
+
+        //select a bean
+        mGraffitiView.setDrawObject(GraffitiLayerBean.buildTest());
+
     }
 
     @Override
@@ -51,6 +56,11 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
 
             case R.id.from_bean:
                 GraffitiViewActivity.jumpToThis(this, bean);
+                break;
+
+            case R.id.undo_last:
+                mGraffitiView.getGraffitiData().removeLastLayer();
+                mGraffitiView.notifyDataChanged();
                 break;
         }
     }
