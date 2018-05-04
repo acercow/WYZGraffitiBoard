@@ -10,8 +10,6 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PorterDuff;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -19,8 +17,8 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.TextView;
 
-import com.bfc.wyz.R;
 import com.sina.weibo.DrawStatusListener;
+import com.sina.weibo.view.graffitiview.R;
 
 public class GraffitiBoardView extends View {
     private static final String TAG = GraffitiBoardView.class.getSimpleName();
@@ -45,12 +43,12 @@ public class GraffitiBoardView extends View {
         init();
     }
 
-    public GraffitiBoardView(Context context, @Nullable AttributeSet attrs) {
+    public GraffitiBoardView(Context context, AttributeSet attrs) {
         super(context, attrs);
         init();
     }
 
-    public GraffitiBoardView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
+    public GraffitiBoardView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         init();
     }
@@ -161,7 +159,7 @@ public class GraffitiBoardView extends View {
         }
     }
 
-    private void drawBitmap(@NonNull Bitmap bitmap, float left, float top, @Nullable Paint paint) {
+    private void drawBitmap(Bitmap bitmap, float left, float top, Paint paint) {
         mCanvas.drawBitmap(bitmap, left, top, paint);
         if (mDrawStatusListener != null) {
             if (!mStartDraw) {

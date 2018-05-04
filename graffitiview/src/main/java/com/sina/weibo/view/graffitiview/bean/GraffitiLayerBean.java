@@ -2,10 +2,10 @@ package com.sina.weibo.view.graffitiview.bean;
 
 import android.text.TextUtils;
 
-import com.bfc.wyz.R;
+import com.google.gson.annotations.SerializedName;
+import com.sina.weibo.view.graffitiview.R;
 import com.sina.weibo.view.graffitiview.data.GraffitiLayerData;
 import com.sina.weibo.view.graffitiview.data.GraffitiNoteData;
-import com.google.gson.annotations.SerializedName;
 
 import java.io.Serializable;
 import java.util.ArrayList;

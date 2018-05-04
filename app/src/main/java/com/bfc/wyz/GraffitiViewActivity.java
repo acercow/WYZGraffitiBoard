@@ -6,8 +6,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 
-import com.sina.weibo.view.graffitiview.bean.GraffitiBean;
 import com.sina.weibo.view.graffitiview.GraffitiView;
+import com.sina.weibo.view.graffitiview.bean.GraffitiBean;
 import com.sina.weibo.view.graffitiview.data.GraffitiData;
 
 import org.json.JSONException;

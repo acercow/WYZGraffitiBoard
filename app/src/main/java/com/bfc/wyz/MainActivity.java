@@ -1,7 +1,7 @@
 package com.bfc.wyz;
 
+import android.app.Activity;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -9,7 +9,8 @@ import android.widget.TextView;
 import com.sina.weibo.DrawStatusListener;
 import com.sina.weibo.view.GraffitiBoardView;
 
-public class MainActivity extends AppCompatActivity {
+
+public class MainActivity extends Activity {
 
     private TextView mClearText, mWarnText, mGuideText;
     private ImageView mCloseImage;
