@@ -1,4 +1,4 @@
-package com.bfc.wyzgraffitiboard.view;
+package com.sina.weibo.view;
 
 import android.content.Context;
 import android.content.res.Resources;
@@ -19,8 +19,8 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.TextView;
 
-import com.bfc.wyzgraffitiboard.R;
-import com.bfc.wyzgraffitiboard.graffitimanager.DrawStatusListener;
+import com.bfc.wyz.R;
+import com.sina.weibo.DrawStatusListener;
 
 public class GraffitiBoardView extends View {
     private static final String TAG = GraffitiBoardView.class.getSimpleName();

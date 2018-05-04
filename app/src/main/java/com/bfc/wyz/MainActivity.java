@@ -1,4 +1,4 @@
-package com.bfc.wyzgraffitiboard;
+package com.bfc.wyz;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -6,8 +6,8 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.bfc.wyzgraffitiboard.graffitimanager.DrawStatusListener;
-import com.bfc.wyzgraffitiboard.view.GraffitiBoardView;
+import com.sina.weibo.DrawStatusListener;
+import com.sina.weibo.view.GraffitiBoardView;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -34,7 +34,7 @@ public class MainActivity extends AppCompatActivity {
             public void onStatusChange(DrawStatus drawStatus, int giftNum, int coinNum) {
                 switch (drawStatus) {
                     case DEFAULT:
-                        mClearText.setTextColor(getResources().getColor(R.color.color_clear_gray));
+//                        mClearText.setTextColor(getResources().getColor(R.color.color_clear_gray));
                         mWarnText.setText("");
                         mGuideText.setVisibility(View.VISIBLE);
                         break;

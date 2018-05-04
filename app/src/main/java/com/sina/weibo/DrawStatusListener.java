@@ -1,4 +1,4 @@
-package com.bfc.wyzgraffitiboard.graffitimanager;
+package com.sina.weibo;
 
 /**
  * @author shichao5
