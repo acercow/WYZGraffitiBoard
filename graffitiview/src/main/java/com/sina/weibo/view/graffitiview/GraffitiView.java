@@ -171,9 +171,15 @@ public class GraffitiView extends ViewGroup {
         //check view deleted
         int childCount = getChildCount();
         for (int i = 0; i < childCount; i++) {
-            View view = getChildAt(i);
+            final View view = getChildAt(i);
             if (!data.getLayers().contains(view.getTag())) {
-                notifyDataChanged((GraffitiData.GraffitiLayerData) view.getTag());
+                //must use handler
+                post(new Runnable() {
+                    @Override
+                    public void run() {
+                        notifyDataChanged((GraffitiData.GraffitiLayerData) view.getTag());
+                    }
+                });
             }
         }
 
@@ -478,6 +484,14 @@ public class GraffitiView extends ViewGroup {
                 return mLayers.remove(mLayers.size() - 1);
             }
             return null;
+        }
+
+
+        /**
+         * Clear all layers
+         */
+        public void clearLayers() {
+            mLayers.clear();
         }
 
         public List<GraffitiData.GraffitiLayerData> getLayers() {
