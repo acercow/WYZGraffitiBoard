@@ -57,8 +57,10 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
                 break;
 
             case R.id.undo_last:
+
                 mGraffitiView.getGraffitiData().clearLayers();
                 mGraffitiView.notifyDataChanged();
+
                 break;
         }
     }

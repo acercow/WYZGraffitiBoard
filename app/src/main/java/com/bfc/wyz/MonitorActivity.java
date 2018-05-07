@@ -4,7 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.widget.TextView;
+import android.widget.EditText;
 
 /**
  * Created by fishyu on 2018/5/4.
@@ -18,7 +18,7 @@ public class MonitorActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.monitor_activity);
-        TextView textView = findViewById(R.id.monitor);
+        EditText textView = findViewById(R.id.monitor);
 
         //show
         String value = getIntent().getStringExtra(KEY_CONTENT);
