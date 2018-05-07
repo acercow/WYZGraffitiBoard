@@ -18,7 +18,7 @@ public class GraffitiBean implements Serializable {
     static Gson GSON = new Gson();
 
 
-    @SerializedName("layers")
+    @SerializedName("layer")
     private List<GraffitiLayerBean> mLayers;
 
     public GraffitiBean() {
@@ -56,23 +56,23 @@ public class GraffitiBean implements Serializable {
 
     public static class GraffitiLayerBean implements Serializable {
 
-        @SerializedName("id")
+        @SerializedName("gift_id")
         private String id; //礼物id
 
         @SerializedName("canvas_width")
-        private float mPercentageCanvasWidth = 100.0f; //画布宽度
+        private float mPercentageCanvasWidth = 1.0f; //画布宽度
 
         @SerializedName("canvas_height")
-        private float mPercentageCanvasHeight = 100.0f; //画布高度
+        private float mPercentageCanvasHeight = 1.0f; //画布高度
 
         @SerializedName("width")
-        private float mPercentageNoteWidth = 6.0f;
+        private float mPercentageNoteWidth = 0.06f;
 
         @SerializedName("height")
-        private float mPercentageNoteHeight = 6.0f;
+        private float mPercentageNoteHeight = 0.06f;
 
         @SerializedName("distance")
-        private float mPercentageNoteDistance = 14.0f;
+        private float mPercentageNoteDistance = 0.14f;
 
         @SerializedName("type")
         private int mNoteType; // 0手绘 1图片 2其他
@@ -83,7 +83,7 @@ public class GraffitiBean implements Serializable {
         @SerializedName("animation")
         private int mAnimation;
 
-        @SerializedName("notes")
+        @SerializedName("note")
         private List<GraffitiBean.GraffitiLayerBean.GraffitiNoteBean> mNotes;
 
         public GraffitiLayerBean() {
@@ -156,6 +156,46 @@ public class GraffitiBean implements Serializable {
             return mAnimation;
         }
 
+        public void setId(String id) {
+            this.id = id;
+        }
+
+        public void setPercentageCanvasWidth(float percentageCanvasWidth) {
+            this.mPercentageCanvasWidth = percentageCanvasWidth;
+        }
+
+        public void setPercentageCanvasHeight(float percentageCanvasHeight) {
+            this.mPercentageCanvasHeight = percentageCanvasHeight;
+        }
+
+        public void setPercentageNoteWidth(float percentageNoteWidth) {
+            this.mPercentageNoteWidth = percentageNoteWidth;
+        }
+
+        public void setPercentageNoteHeight(float percentageNoteHeight) {
+            this.mPercentageNoteHeight = percentageNoteHeight;
+        }
+
+        public void setPercentageNoteDistance(float percentageNoteDistance) {
+            this.mPercentageNoteDistance = percentageNoteDistance;
+        }
+
+        public void setNoteType(int noteType) {
+            this.mNoteType = noteType;
+        }
+
+        public void setmNoteDrawableRes(int noteDrawableRes) {
+            this.mNoteDrawableRes = noteDrawableRes;
+        }
+
+        public void setAnimation(int animation) {
+            this.mAnimation = animation;
+        }
+
+        public void setNotes(List<GraffitiNoteBean> notes) {
+            this.mNotes = notes;
+        }
+
         @Override
         public boolean equals(Object obj) {
             if (obj instanceof GraffitiBean.GraffitiLayerBean) {
@@ -197,7 +237,11 @@ public class GraffitiBean implements Serializable {
             @SerializedName("y")
             private float mPercentageY;
 
+            @SerializedName("time")
+            private long mTime;
+
             public GraffitiNoteBean() {
+                // do nothing by default
             }
 
             public GraffitiNoteBean(GraffitiView.GraffitiData.GraffitiLayerData.GraffitiNoteData noteData) {

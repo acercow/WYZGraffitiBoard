@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 
 import com.sina.weibo.view.graffitiview.GraffitiBean;
@@ -13,6 +14,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class GraffitiViewActivity extends Activity implements View.OnClickListener {
+
+    static final String TAG = GraffitiViewActivity.class.getSimpleName();
 
     private GraffitiView mGraffitiView;
 
@@ -35,6 +38,13 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
 
         //select a bean
         mGraffitiView.setDrawObject(GraffitiBean.GraffitiLayerBean.buildTest());
+
+        mGraffitiView.setOnDataChangedCallback(new GraffitiView.IOnDataChangedCallback() {
+            @Override
+            public void onDataChanged(GraffitiView graffitiView, GraffitiBean.GraffitiLayerBean drawingObject) {
+                Log.e(TAG, "onDataChanged -> " + graffitiView.getGraffitiData().getCurrentTotalNote());
+            }
+        });
 
     }
 
