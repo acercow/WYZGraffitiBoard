@@ -6,10 +6,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 
+import com.sina.weibo.view.graffitiview.GraffitiBean;
 import com.sina.weibo.view.graffitiview.GraffitiView;
-import com.sina.weibo.view.graffitiview.bean.GraffitiBean;
-import com.sina.weibo.view.graffitiview.bean.GraffitiLayerBean;
-import com.sina.weibo.view.graffitiview.data.GraffitiData;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -27,16 +25,16 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
         mGraffitiView = (GraffitiView) findViewById(R.id.graffiti_view);
 
 
-        GraffitiData graffitiData = null;
+        GraffitiView.GraffitiData graffitiData = null;
         if (getIntent().getSerializableExtra(KEY_GRAFFITI_BEAN) instanceof GraffitiBean) {
             GraffitiBean graffitiBean = (GraffitiBean) getIntent().getSerializableExtra(KEY_GRAFFITI_BEAN);
-            graffitiData = new GraffitiData(graffitiBean);
+            graffitiData = new GraffitiView.GraffitiData(graffitiBean);
         }
 
         mGraffitiView.installData(graffitiData);
 
         //select a bean
-        mGraffitiView.setDrawObject(GraffitiLayerBean.buildTest());
+        mGraffitiView.setDrawObject(GraffitiBean.GraffitiLayerBean.buildTest());
 
     }
 
