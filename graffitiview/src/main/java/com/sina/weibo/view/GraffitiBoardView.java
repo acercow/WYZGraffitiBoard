@@ -58,7 +58,7 @@ public class GraffitiBoardView extends View {
 //        mPaint.setAntiAlias(true);
 //        mPaint.setStrokeWidth(10);
 //        mPath = new Path();
-        mGiftIcon = BitmapFactory.decodeResource(getResources(), R.drawable.shield_icon);
+        mGiftIcon = BitmapFactory.decodeResource(getResources(), R.drawable.icon_red_flowers);
 //        BitmapShader bitmapShader = new BitmapShader(mGiftIcon, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
 ////        mPaint.setShader(bitmapShader);
 //        mPaint.setStyle(Paint.Style.STROKE);

@@ -21,6 +21,26 @@ public class GraffitiBean implements Serializable {
     @SerializedName("layer")
     private List<GraffitiLayerBean> mLayers;
 
+    /**
+     * 预留
+     * <p>
+     * type:0; 图层类型，目前只有0，手绘
+     */
+    @SerializedName("type")
+    private int type = 0;
+
+    /**
+     * ios需要 对应的画布宽度
+     */
+    @SerializedName("width")
+    private float width; //图层宽度
+
+    /**
+     * ios需要 对应的画布高度
+     */
+    @SerializedName("height")
+    private float height; //图层高度
+
     public GraffitiBean() {
 
     }
@@ -33,7 +53,68 @@ public class GraffitiBean implements Serializable {
             GraffitiBean.GraffitiLayerBean bean = new GraffitiBean.GraffitiLayerBean(layerData);
             mLayers.add(bean);
         }
+        initializeNotesFromPercentage(graffitiData);
     }
+
+    /**
+     * For ios
+     * <p>
+     * Convert all notes to percentage coordinate
+     */
+    public void initializeNotesToPercentage() {
+        if (width != 0 && height != 0) {
+            if (mLayers != null) {
+                for (GraffitiLayerBean layerBean : mLayers) {
+                    if (layerBean.mNotes != null) {
+                        for (GraffitiLayerBean.GraffitiNoteBean noteBean : layerBean.mNotes) {
+                            if (noteBean.mPercentageX > 1 || noteBean.mPercentageY > 1) {
+                                noteBean.mPercentageX = noteBean.mPercentageX / width;
+                                noteBean.mPercentageY = noteBean.mPercentageY / height;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    /**
+     * For ios
+     * <p>
+     * Convert all notes to percentage coordinate
+     */
+    public void initializeNotesFromPercentage(GraffitiView.GraffitiData graffitiData) {
+        if (mLayers != null && mLayers.size() > 0) {
+            if (width <= 0 || height <= 0) {
+                width = graffitiData.getLastLayer().getCanvasWidth();
+                height = graffitiData.getLastLayer().getCanvasHeight();
+            }
+            for (GraffitiLayerBean bean : mLayers) {
+                if (bean.mNotes != null) {
+                    for (GraffitiLayerBean.GraffitiNoteBean noteBean : bean.mNotes) {
+                        if (noteBean.mPercentageX <= 1 || noteBean.mPercentageY <= 1) {
+                            noteBean.mPercentageX = noteBean.mPercentageX * width;
+                            noteBean.mPercentageY = noteBean.mPercentageY * height;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Initialize for IOS
+     *
+     * @param layerData
+     */
+    private void initializeForIOS(GraffitiView.GraffitiData.GraffitiLayerData layerData) {
+        if (width <= 0 || height <= 0) {
+            width = layerData.getCanvasWidth();
+            height = layerData.getCanvasHeight();
+        }
+    }
+
 
     /**
      * convert to string
@@ -74,11 +155,8 @@ public class GraffitiBean implements Serializable {
         @SerializedName("distance")
         private float mPercentageNoteDistance = 0.14f;
 
-        @SerializedName("type")
-        private int mNoteType; // 0手绘 1图片 2其他
-
         @SerializedName("url")
-        private int mNoteDrawableRes = R.drawable.shield_icon;
+        private int mNoteDrawableRes;
 
         @SerializedName("animation")
         private int mAnimation;
@@ -105,7 +183,6 @@ public class GraffitiBean implements Serializable {
             this.mPercentageNoteWidth = bean.mPercentageNoteWidth;
             this.mPercentageNoteHeight = bean.mPercentageNoteHeight;
             this.mPercentageNoteDistance = bean.mPercentageNoteDistance;
-            this.mNoteType = bean.mNoteType;
             this.mNoteDrawableRes = bean.mNoteDrawableRes;
             this.mAnimation = bean.mAnimation;
             mNotes = new ArrayList<>();
@@ -114,7 +191,6 @@ public class GraffitiBean implements Serializable {
                 mNotes.add(b);
             }
         }
-
 
         public String getId() {
             return id;
@@ -138,10 +214,6 @@ public class GraffitiBean implements Serializable {
 
         public float getPercentageNoteDistance() {
             return mPercentageNoteDistance;
-        }
-
-        public int getNoteType() {
-            return mNoteType;
         }
 
         public int getNoteDrawableRes() {
@@ -180,10 +252,6 @@ public class GraffitiBean implements Serializable {
             this.mPercentageNoteDistance = percentageNoteDistance;
         }
 
-        public void setNoteType(int noteType) {
-            this.mNoteType = noteType;
-        }
-
         public void setmNoteDrawableRes(int noteDrawableRes) {
             this.mNoteDrawableRes = noteDrawableRes;
         }
@@ -216,7 +284,6 @@ public class GraffitiBean implements Serializable {
                     ",mPercentageNoteHeight:" + mPercentageNoteHeight +
                     ",mPercentageNoteDistance:" + mPercentageNoteDistance +
                     ",mNoteDrawableRes:" + mNoteDrawableRes +
-                    ",mNoteType:" + mNoteType +
                     ",mAnimation:" + mAnimation +
                     ",mNotes:" + mNotes +
                     "]";
@@ -225,6 +292,7 @@ public class GraffitiBean implements Serializable {
         public static final GraffitiBean.GraffitiLayerBean buildTest() {
             GraffitiBean.GraffitiLayerBean bean = new GraffitiBean.GraffitiLayerBean();
             bean.mAnimation = 1;
+            bean.mNoteDrawableRes = R.drawable.icon_red_flowers;
             return bean;
         }
 

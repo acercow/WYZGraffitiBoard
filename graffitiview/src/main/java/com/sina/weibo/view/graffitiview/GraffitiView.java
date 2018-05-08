@@ -59,6 +59,11 @@ public class GraffitiView extends ViewGroup {
         mNoteCalculator = new SimpleNextNoteCalculator();
         mGraffitiData = initData;
 
+        mDrawingLayer = null;
+        // set view's information if needed
+        onSizeChanged(getMeasuredWidth(), getMeasuredHeight(), 0, 0);
+
+        //reading exits data
         if (initData.isShowMode()) {
             post(new Runnable() {
                 @Override
@@ -67,9 +72,6 @@ public class GraffitiView extends ViewGroup {
                 }
             });
         }
-
-        //TODO when reading exits
-        mDrawingLayer = null;
     }
 
 
@@ -443,6 +445,7 @@ public class GraffitiView extends ViewGroup {
          */
         public GraffitiData(GraffitiBean graffitiBean) {
             mSource = graffitiBean;
+            graffitiBean.initializeNotesToPercentage();
             for (GraffitiBean.GraffitiLayerBean bean : graffitiBean.getLayers()) {
                 GraffitiData.GraffitiLayerData layerData = new GraffitiData.GraffitiLayerData(bean);
                 addLayer(layerData);
@@ -496,16 +499,14 @@ public class GraffitiView extends ViewGroup {
             }
         }
 
-
         /**
-         * Removing last one
+         * Getting last layer
          *
          * @return
          */
-        public GraffitiData.GraffitiLayerData removeLastLayer() {
+        public GraffitiLayerData getLastLayer() {
             if (mLayers != null && mLayers.size() > 0) {
                 GraffitiLayerData last = mLayers.get(mLayers.size() - 1);
-                removeLayer(last);
                 return last;
             }
             return null;
