@@ -130,7 +130,7 @@ public class GraffitiBean implements Serializable {
      *
      * @return
      */
-    public List<GraffitiBean.GraffitiLayerBean> getLayers() {
+    public List<GraffitiLayerBean> getLayers() {
         return mLayers;
     }
 
@@ -156,13 +156,13 @@ public class GraffitiBean implements Serializable {
         private float mPercentageNoteDistance = 0.14f;
 
         @SerializedName("url")
-        private int mNoteDrawableRes;
+        private String mNoteDrawableRes;
 
         @SerializedName("animation")
         private int mAnimation;
 
         @SerializedName("note")
-        private List<GraffitiBean.GraffitiLayerBean.GraffitiNoteBean> mNotes;
+        private List<GraffitiNoteBean> mNotes;
 
         public GraffitiLayerBean() {
 
@@ -216,11 +216,11 @@ public class GraffitiBean implements Serializable {
             return mPercentageNoteDistance;
         }
 
-        public int getNoteDrawableRes() {
+        public String getNoteDrawableRes() {
             return mNoteDrawableRes;
         }
 
-        public List<GraffitiBean.GraffitiLayerBean.GraffitiNoteBean> getNotes() {
+        public List<GraffitiNoteBean> getNotes() {
             return mNotes;
         }
 
@@ -252,7 +252,7 @@ public class GraffitiBean implements Serializable {
             this.mPercentageNoteDistance = percentageNoteDistance;
         }
 
-        public void setmNoteDrawableRes(int noteDrawableRes) {
+        public void setmNoteDrawableRes(String noteDrawableRes) {
             this.mNoteDrawableRes = noteDrawableRes;
         }
 
@@ -289,13 +289,22 @@ public class GraffitiBean implements Serializable {
                     "]";
         }
 
+
+        public static List<String> mTestUrls = new ArrayList();
+
+        static {
+            mTestUrls.add("https://images.pexels.com/users/avatars/206851/min-an-377.jpeg?w=60&h=60&fit=crop&crop=faces");
+            mTestUrls.add("https://images.pexels.com/users/avatars/220024/daria-shevtsova-140.jpeg?w=60&h=60&fit=crop&crop=faces");
+            mTestUrls.add("https://images.pexels.com/users/avatars/26735/lisa-fotios-386.jpeg?w=60&h=60&fit=crop&crop=faces");
+        }
+
         public static final GraffitiBean.GraffitiLayerBean buildTest() {
             GraffitiBean.GraffitiLayerBean bean = new GraffitiBean.GraffitiLayerBean();
             bean.mAnimation = 1;
-            bean.mNoteDrawableRes = R.drawable.icon_red_flowers;
+            int p = (int) (System.currentTimeMillis() % 3);
+            bean.mNoteDrawableRes = mTestUrls.get(p);
             return bean;
         }
-
 
         public class GraffitiNoteBean implements Serializable {
 

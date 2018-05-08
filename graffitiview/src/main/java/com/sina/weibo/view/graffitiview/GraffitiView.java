@@ -1,15 +1,16 @@
 package com.sina.weibo.view.graffitiview;
 
+import android.accounts.NetworkErrorException;
 import android.animation.Animator;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.RectF;
 import android.os.Handler;
 import android.os.Message;
+import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -17,10 +18,16 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by fishyu on 2018/4/28.
+ * <p>
+ * TWO MODE:(See {@link GraffitiData} for more detail)
+ * 1,READ-MODE
+ * 2,WRITE-MODE
  */
 public class GraffitiView extends ViewGroup {
 
@@ -35,6 +42,22 @@ public class GraffitiView extends ViewGroup {
 
     private IOnDataChangedCallback mOnDataChangedCallback;
 
+    private Runnable showNotes = new Runnable() {
+        @Override
+        public void run() {
+            if (!GraffitiResourcesManager.isResourceLoaded()) {
+                Log.e(TAG, "Resources is not ready, can't show!");
+                postDelayed(showNotes, 300);
+                return;
+            } else if (!GraffitiResourcesManager.isResourcesReady(mGraffitiData.getLayerResources())) {
+                Log.e(TAG, "Necessary resources is not ready, can't show!");
+                postDelayed(showNotes, 300);
+                return;
+            }
+            notifyDataChanged();
+        }
+    };
+
     public GraffitiView(Context context) {
         super(context);
     }
@@ -48,9 +71,9 @@ public class GraffitiView extends ViewGroup {
     }
 
     /**
-     * 初始化，GraffitiData 带有配置参数，做相应配置
+     * 初始化
      *
-     * @param initData
+     * @param initData READ-MODE must not be null, otherwise would auto to be WRITE-MODE.
      */
     public void installData(GraffitiData initData) {
         if (initData == null) {
@@ -64,16 +87,10 @@ public class GraffitiView extends ViewGroup {
         onSizeChanged(getMeasuredWidth(), getMeasuredHeight(), 0, 0);
 
         //reading exits data
-        if (initData.isShowMode()) {
-            post(new Runnable() {
-                @Override
-                public void run() {
-                    notifyDataChanged();
-                }
-            });
+        if (initData.isReadMode()) {
+            post(showNotes);
         }
     }
-
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
@@ -110,53 +127,77 @@ public class GraffitiView extends ViewGroup {
             return super.onTouchEvent(event);
         }
 
-        if (mGraffitiData.isShowMode()) {
-            Log.e(TAG, "player mode, just show notes");
-            return super.onTouchEvent(event);
-        }
-
-        if (getMeasuredHeight() == 0 || getMeasuredWidth() == 0) {
-            Log.e(TAG, "width or height is 0, getMeasuredWidth() -> " + getMeasuredWidth() + " getMeasuredHeight() -> " + getMeasuredHeight());
-            return super.onTouchEvent(event);
-        }
-
-        if (getCurrentDrawObject() == null) {
-            Log.e(TAG, "no GraffitiLayerBean set, nothing to draw.");
-            return super.onTouchEvent(event);
-        }
-
         final float pointX = event.getX();
         final float pointY = event.getY();
-
-        // Checks for the event that occurs
-        switch (event.getAction()) {
-            case MotionEvent.ACTION_DOWN:
-                if (mDrawingLayer != null) {
-                    throw new RuntimeException("How could mDrawingLayer not be null !");
-                }
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            if (mDrawingLayer != null) {
+                throw new RuntimeException("How could mDrawingLayer not be null !");
+            }
+            if (checkWritable()) {
                 mDrawingLayer = mGraffitiData.getDrawingLayer(getCurrentDrawObject());
                 mDrawingLayer.installView(getMeasuredWidth(), getMeasuredHeight());
                 if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY))) {
                     notifyDataChanged(mDrawingLayer, true);
                 }
                 return true;
-            case MotionEvent.ACTION_MOVE:
-                if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY))) {
-                    notifyDataChanged(mDrawingLayer, true);
-                }
-                return true;
-
-            case MotionEvent.ACTION_UP:
-            case MotionEvent.ACTION_CANCEL:
-                if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY))) {
-                    notifyDataChanged(mDrawingLayer, true);
-                }
-                mDrawingLayer = null;
-                return true;
-
-            default:
-                return true;
+            }
+        } else if (mDrawingLayer != null) {
+            // Checks for the event that occurs
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_MOVE:
+                    if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY))) {
+                        notifyDataChanged(mDrawingLayer, true);
+                    }
+                    return true;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY))) {
+                        notifyDataChanged(mDrawingLayer, true);
+                    }
+                    mDrawingLayer = null;
+                    return true;
+                default:
+                    return true;
+            }
         }
+
+        return super.onTouchEvent(event);
+    }
+
+    /**
+     * Whether we can write or not.
+     *
+     * @return
+     */
+    protected boolean checkWritable() {
+        if (mGraffitiData == null) {
+            throw new IllegalStateException("You have not call#installData(GraffitiData) to install data.");
+        }
+
+        if (mGraffitiData.isReadMode()) {
+            Log.e(TAG, "player mode, just show notes");
+            return false;
+        }
+
+        if (getMeasuredHeight() == 0 || getMeasuredWidth() == 0) {
+            Log.e(TAG, "width or height is 0, getMeasuredWidth() -> " + getMeasuredWidth() + " getMeasuredHeight() -> " + getMeasuredHeight());
+            return false;
+        }
+
+        if (getCurrentDrawObject() == null) {
+            Log.e(TAG, "GraffitiLayerBean is not set, can not draw.");
+            return false;
+        }
+
+        if (!GraffitiResourcesManager.isResourceLoaded()) {
+            Log.e(TAG, "resources is not ready, nothing to draw.");
+            return false;
+        } else if (!GraffitiResourcesManager.isResourceReady(getCurrentDrawObject().getNoteDrawableRes())) {
+            Log.e(TAG, "GraffitiLayerBean's resources is not ready, can not draw.");
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -271,7 +312,7 @@ public class GraffitiView extends ViewGroup {
         /**
          * @param graffitiView  GraffitiView itself
          * @param drawingObject Current drawing object set by  {@link GraffitiView#setDrawObject(GraffitiBean.GraffitiLayerBean)}.
-         *                      May be null if flush change like clear or something.
+         *                      May be null if flush change like stopAndClear or something.
          */
         void onDataChanged(GraffitiView graffitiView, GraffitiBean.GraffitiLayerBean drawingObject);
     }
@@ -284,13 +325,12 @@ public class GraffitiView extends ViewGroup {
 
         final String TAG = GraffitiLayerView.class.getSimpleName() + this;
 
-        private Bitmap mGiftIcon;
         private int mBlankCanvas = -1;
+        private Bitmap mNoteBitmap;
 
         public GraffitiLayerView(Context context, GraffitiData.GraffitiLayerData data) {
             super(context);
             setTag(data);
-            mGiftIcon = BitmapFactory.decodeResource(getResources(), data.getNoteDrawableRes());
 
             // installView animator
             getLayerData().installAnimator(new Runnable() {
@@ -299,6 +339,8 @@ public class GraffitiView extends ViewGroup {
                     notifyDataChanged();
                 }
             });
+
+            mNoteBitmap = getLayerData().getNoteBitmap();
         }
 
 
@@ -326,7 +368,7 @@ public class GraffitiView extends ViewGroup {
             if (w != oldw || h != oldh) {
                 if (w >= 0 && h >= 0) {
                     if (getLayerData().installView(w, h)) {
-                        if (getLayerData().isShowMode()) {
+                        if (getLayerData().isReadMode()) {
                             getLayerData().installNotes();
                             notifyDataChanged();
                         }
@@ -345,13 +387,6 @@ public class GraffitiView extends ViewGroup {
         protected void onDetachedFromWindow() {
             super.onDetachedFromWindow();
             getLayerData().stopAnimatorIfExits();
-            if (mGiftIcon != null && !mGiftIcon.isRecycled()) {
-                try {
-                    mGiftIcon.recycle();
-                } catch (Error e) {
-                    e.printStackTrace();
-                }
-            }
         }
 
         @Override
@@ -370,6 +405,11 @@ public class GraffitiView extends ViewGroup {
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
+            if (mNoteBitmap == null || mNoteBitmap.isRecycled()) {
+                Log.e(TAG, "How could note bitmap be null or recycled ?!");
+                return;
+            }
+
             if (getLayerData().isForceDrawAll()) {
                 //TODO clean the canvas ??
 //            Log.e(TAG, " restore canvas to -> " + mBlankCanvas);
@@ -397,7 +437,7 @@ public class GraffitiView extends ViewGroup {
          * @param note   Note information
          */
         protected void drawNote(Canvas canvas, GraffitiData.GraffitiLayerData.GraffitiNoteData note) {
-            onDrawNote(canvas, note, mGiftIcon, note.getCalculateRectF());
+            onDrawNote(canvas, note, mNoteBitmap, note.getCalculateRectF());
         }
 
 
@@ -434,12 +474,12 @@ public class GraffitiView extends ViewGroup {
         /**
          * 图层
          */
-        private List<GraffitiData.GraffitiLayerData> mLayers = new ArrayList<>();
+        private List<GraffitiLayerData> mLayers = new ArrayList<>();
 
         private GraffitiBean mSource;
 
         /**
-         * Constructor from {@link GraffitiBean}, which should be installed later checked by {@link #isShowMode()}
+         * Constructor from {@link GraffitiBean}, which should be installed later checked by {@link #isReadMode()}
          *
          * @param graffitiBean
          */
@@ -462,13 +502,13 @@ public class GraffitiView extends ViewGroup {
 
 
         /**
-         * Whether or not we are in SHOW-MODE or note.
+         * Whether or not we are in READ-MODE or note.
          * <p>
-         * For some details with SHOW-MODE see {@link GraffitiData}
+         * For some details with READ-MODE see {@link GraffitiData}
          *
          * @return
          */
-        public boolean isShowMode() {
+        public boolean isReadMode() {
             return mSource != null;
         }
 
@@ -519,7 +559,7 @@ public class GraffitiView extends ViewGroup {
             mLayers.clear();
         }
 
-        public List<GraffitiData.GraffitiLayerData> getLayers() {
+        public List<GraffitiLayerData> getLayers() {
             return mLayers;
         }
 
@@ -543,6 +583,25 @@ public class GraffitiView extends ViewGroup {
                 total += layerData.getNotes().size();
             }
             return total;
+        }
+
+        /**
+         * Get layer resources
+         *
+         * @return
+         */
+        public List getLayerResources() {
+            if (mLayers != null && mLayers.size() > 0) {
+                List<String> list = new ArrayList<>();
+                for (GraffitiLayerData layerData : mLayers) {
+                    String url = layerData.getNoteDrawableRes();
+                    if (!list.contains(url)) {
+                        list.add(url);
+                    }
+                }
+                return list;
+            }
+            return null;
         }
 
         public static final GraffitiData generateDefault() {
@@ -576,7 +635,7 @@ public class GraffitiView extends ViewGroup {
 
             private float mNoteDistance;
 
-            private List<GraffitiData.GraffitiLayerData.GraffitiNoteData> mNotes = new ArrayList<>();
+            private List<GraffitiNoteData> mNotes = new ArrayList<>();
 
             public static final int MASK_REDRAW = 0x00000011;
 
@@ -629,11 +688,11 @@ public class GraffitiView extends ViewGroup {
 
 
             /**
-             * Cooperate with {@link GraffitiData#isShowMode()}.
+             * Cooperate with {@link GraffitiData#isReadMode()}.
              *
              * @return
              */
-            public boolean isShowMode() {
+            public boolean isReadMode() {
                 return mLayerBean.getNotes() != null && mLayerBean.getNotes().size() > 0;
             }
 
@@ -642,7 +701,7 @@ public class GraffitiView extends ViewGroup {
              * Install notes
              */
             public void installNotes() {
-                if (isShowMode()) {
+                if (isReadMode()) {
                     for (GraffitiBean.GraffitiLayerBean.GraffitiNoteBean noteBean : mLayerBean.getNotes()) {
                         GraffitiData.GraffitiLayerData.GraffitiNoteData noteData = new GraffitiData.GraffitiLayerData.GraffitiNoteData(this, noteBean);
                         addNote(noteData);
@@ -661,7 +720,7 @@ public class GraffitiView extends ViewGroup {
                 }
             }
 
-            public List<GraffitiData.GraffitiLayerData.GraffitiNoteData> getNotes() {
+            public List<GraffitiNoteData> getNotes() {
                 return mNotes;
             }
 
@@ -697,8 +756,17 @@ public class GraffitiView extends ViewGroup {
                 return mNoteDistance;
             }
 
-            public int getNoteDrawableRes() {
+            public String getNoteDrawableRes() {
                 return mLayerBean.getNoteDrawableRes();
+            }
+
+            /**
+             * Getting note bitmap
+             *
+             * @return
+             */
+            public Bitmap getNoteBitmap() {
+                return GraffitiResourcesManager.getBitmapProvider() != null ? GraffitiResourcesManager.getBitmapProvider().loadBitmap(getNoteDrawableRes(), null) : null;
             }
 
 
@@ -732,7 +800,7 @@ public class GraffitiView extends ViewGroup {
              *
              * @param notes
              */
-            public boolean addNote(List<GraffitiData.GraffitiLayerData.GraffitiNoteData> notes) {
+            public boolean addNote(List<GraffitiNoteData> notes) {
                 if (notes == null || notes.size() < 0) {
                     return false;
                 }
@@ -1050,6 +1118,9 @@ public class GraffitiView extends ViewGroup {
     }
 
 
+    /**
+     * Animation Factory, managing all animators
+     */
     public static class AnimatorFactory {
 
         public final static int SCALE = 1;
@@ -1274,4 +1345,456 @@ public class GraffitiView extends ViewGroup {
             }
         }
     }
+
+
+    /**
+     * GraffitiNoteBean's resources manager.
+     * <p>
+     * GraffitiView can be functional only when {@link #isResourceLoaded()} {@link #isResourcesReady(List)}
+     * {@link #isResourceReady(String)}
+     */
+    public static class GraffitiResourcesManager {
+
+        static final String TAG = GraffitiResourcesManager.class.getSimpleName();
+
+        static IBitmapManager mBitmapCache;
+
+        /**
+         * Bitmap downloader for {@link GraffitiResourcesManager}
+         */
+        public interface IBitmapDownloader {
+
+            /**
+             * Download image, sync call
+             *
+             * @param url
+             * @param listener
+             * @return
+             */
+            void download(String url, IBitmapManager.IBitmapListener listener);
+        }
+
+        /**
+         * Manage caches for {@link GraffitiResourcesManager}
+         */
+        public interface IBitmapManager {
+
+            /**
+             * Listeners for {@link MemoryBitmapManager}
+             */
+            interface IBitmapListener {
+
+                /**
+                 * ImageLoading start
+                 *
+                 * @param url
+                 */
+                void onStart(String url);
+
+                /**
+                 * ImageLoading complete
+                 *
+                 * @param url
+                 * @param bitmap Bitmap we want
+                 * @param e      not null if load failed
+                 */
+                void onComplete(String url, Bitmap bitmap, Throwable e);
+
+                /**
+                 * For batch of urls
+                 *
+                 * @param e
+                 */
+                void onComplete(Throwable e);
+
+            }
+
+            /**
+             * Load bitmap
+             *
+             * @param url
+             * @return
+             */
+            Bitmap loadBitmap(final String url, IBitmapManager.IBitmapListener listener);
+
+
+            /**
+             * Load batch of bitmaps
+             *
+             * @param urls
+             */
+            void loadBitmaps(List<String> urls, IBitmapManager.IBitmapListener listener, boolean forceReload);
+
+
+            /**
+             * Have we load all bitmaps
+             *
+             * @return
+             */
+            boolean loadFinished();
+
+
+            /**
+             * Cache bitmap
+             *
+             * @param url
+             * @param bitmap
+             */
+            void cache(String url, Bitmap bitmap);
+
+            /**
+             * Clear caches
+             */
+            void clear();
+
+            /**
+             * Should be asyn call
+             *
+             * @param listener
+             * @return
+             */
+            void download(String url, IBitmapManager.IBitmapListener listener);
+
+        }
+
+
+        /**
+         * batch of urls loading task
+         */
+        private static class LoadsBitmapTask implements IBitmapManager.IBitmapListener {
+
+            int mRetryCounter = 3;
+
+            List<IBitmapManager.IBitmapListener> mListeners = new ArrayList<>();
+
+            List<String> mUrls;
+            int mCompleteCounter;
+
+            IBitmapManager mBitmapManager;
+
+            Exception mLastException;
+
+            public LoadsBitmapTask(IBitmapManager bitmapCache, List<String> urls) {
+                mBitmapManager = bitmapCache;
+                mUrls = new ArrayList<>(urls);
+                mCompleteCounter = urls.size();
+            }
+
+            public void addListener(IBitmapManager.IBitmapListener listener) {
+                if (isTaskFinished()) {
+                    return;
+                }
+                if (!mListeners.contains(listener)) {
+                    mListeners.add(listener);
+                }
+            }
+
+            @Override
+            public void onStart(String url) {
+                for (IBitmapManager.IBitmapListener listener : mListeners) {
+                    if (listener != null) {
+                        listener.onStart(url);
+                    }
+                }
+            }
+
+            @Override
+            public void onComplete(String url, Bitmap bitmap, Throwable e) {
+                for (IBitmapManager.IBitmapListener listener : mListeners) {
+                    if (listener != null) {
+                        listener.onComplete(url, bitmap, e);
+                    }
+                }
+                //complete counter
+                mCompleteCounter--;
+
+                if (bitmap != null) {
+                    mUrls.remove(url);
+                }
+
+                if (mCompleteCounter == 0) {
+                    if (isAllCompleted()) {
+                        mLastException = null;
+                    } else {
+                        //error when
+                        StringBuilder stringBuilder = new StringBuilder();
+                        stringBuilder.append("The flowing urls can not be downloaded:\n");
+                        for (String value : mUrls) {
+                            stringBuilder.append(value + "\n");
+                        }
+                        mLastException = new NetworkErrorException(stringBuilder.toString());
+
+                    }
+                    onComplete(mLastException);
+                }
+            }
+
+            @Override
+            public void onComplete(Throwable e) {
+                Log.e(TAG, "Finally download all e -> " + e);
+                for (IBitmapManager.IBitmapListener listener : mListeners) {
+                    if (listener != null) {
+                        listener.onComplete(e);
+                    }
+                }
+
+                if (e != null && mRetryCounter > 0 && mBitmapManager != null) {
+                    Log.e(TAG, "check failed, retry ...");
+                    start();
+                    mRetryCounter--;
+                    return;
+                }
+
+                //stopAndClear all listeners
+                stopAndClear();
+            }
+
+
+            public boolean isTaskFinished() {
+                return mCompleteCounter == 0 || mBitmapManager == null || mListeners == null;
+            }
+
+
+            public boolean isAllCompleted() {
+                return mUrls.size() == 0;
+            }
+
+            /**
+             * Clear all
+             */
+            public void stopAndClear() {
+                mListeners.clear();
+                mListeners = null;
+                mRetryCounter = 0;
+                mCompleteCounter = 0;
+                mBitmapManager = null;
+            }
+
+            /**
+             * Start task
+             */
+            public void start() {
+                if (mBitmapManager != null) {
+                    for (String url : mUrls) {
+                        mBitmapManager.loadBitmap(url, this);
+                    }
+                }
+            }
+
+        }
+
+
+        private static class MemoryBitmapManager implements IBitmapManager {
+
+            static boolean ENABLE_RISK = false;
+
+            private Map<String, Bitmap> mCaches = new HashMap<>();
+
+            private LoadsBitmapTask mCurrentLoadBitmapsTask;
+
+            private IBitmapDownloader mBitmapDownloader;
+
+            public MemoryBitmapManager(IBitmapDownloader downloader) {
+                if (downloader == null) {
+                    throw new IllegalArgumentException("IBitmapDownloader can not be null !");
+                }
+                mBitmapDownloader = downloader;
+            }
+
+            @Override
+            public Bitmap loadBitmap(final String url, final IBitmapListener listener) {
+                if (TextUtils.isEmpty(url)) {
+                    return null;
+                }
+                if (mCaches.containsKey(url)) {
+                    return mCaches.get(url);
+                }
+                download(url, new IBitmapListener() {
+                    @Override
+                    public void onStart(String url) {
+                        if (listener != null) {
+                            listener.onStart(url);
+                        }
+                    }
+
+                    @Override
+                    public void onComplete(String url, Bitmap bitmap, Throwable e) {
+                        if (listener != null) {
+                            listener.onComplete(url, bitmap, e);
+                        }
+                        cache(url, bitmap);
+                    }
+
+                    @Override
+                    public void onComplete(Throwable e) {
+                        if (listener != null) {
+                            listener.onComplete(e);
+                        }
+                    }
+                });
+                return null;
+            }
+
+
+            @Override
+            public void loadBitmaps(final List<String> urls, final IBitmapListener listener, boolean forceReload) {
+                if (urls == null) {
+                    listener.onComplete(new IllegalArgumentException("urls is null"));
+                    return;
+                }
+
+                if (forceReload && mCurrentLoadBitmapsTask != null) {
+                    mCurrentLoadBitmapsTask.stopAndClear();
+                    mCurrentLoadBitmapsTask = null;
+                }
+
+                if (mCurrentLoadBitmapsTask != null) {
+                    Log.e(TAG, "LoadsBitmapTask already in flight. isAllCompleted -> " + mCurrentLoadBitmapsTask.isAllCompleted());
+                    if (mCurrentLoadBitmapsTask.isTaskFinished()) {
+                        listener.onComplete(mCurrentLoadBitmapsTask.mLastException);
+                    } else {
+                        mCurrentLoadBitmapsTask.addListener(listener);
+                    }
+                    return;
+                }
+
+                //downloads all
+                mCurrentLoadBitmapsTask = new LoadsBitmapTask(MemoryBitmapManager.this, urls);
+                mCurrentLoadBitmapsTask.addListener(new IBitmapListener() {
+                    @Override
+                    public void onStart(String url) {
+                        if (listener != null) {
+                            listener.onStart(url);
+                        }
+                    }
+
+                    @Override
+                    public void onComplete(String url, Bitmap bitmap, Throwable e) {
+                        if (listener != null) {
+                            listener.onComplete(url, bitmap, e);
+                        }
+                    }
+
+                    @Override
+                    public void onComplete(Throwable e) {
+                        if (listener != null) {
+                            listener.onComplete(e);
+                        }
+                    }
+                });
+                mCurrentLoadBitmapsTask.start();
+            }
+
+            @Override
+            public boolean loadFinished() {
+                return ENABLE_RISK || (mCurrentLoadBitmapsTask != null && mCurrentLoadBitmapsTask.isAllCompleted());
+            }
+
+            @Override
+            public void cache(String url, Bitmap bitmap) {
+                if (TextUtils.isEmpty(url) || bitmap == null) {
+                    return;
+                }
+                mCaches.put(url, bitmap);
+            }
+
+            @Override
+            public void clear() {
+                mCaches.clear();
+                mCurrentLoadBitmapsTask = null;
+            }
+
+            @Override
+            public void download(String url, IBitmapListener listener) {
+                mBitmapDownloader.download(url, listener);
+            }
+        }
+
+
+        /**
+         * Init {@link IBitmapManager} and all
+         *
+         * @param downloader
+         */
+        public static void init(IBitmapDownloader downloader) {
+            if (mBitmapCache == null) {
+                mBitmapCache = new MemoryBitmapManager(downloader);
+            }
+        }
+
+        /**
+         * Loads urls
+         *
+         * @param listener
+         * @param urls
+         */
+        public static void loadResources(List<String> urls, IBitmapManager.IBitmapListener listener, boolean forceReload) {
+            necessary();
+            mBitmapCache.loadBitmaps(urls, listener, forceReload);
+        }
+
+        /**
+         * Is all urls loaded finished or not.
+         *
+         * @return
+         */
+        public static boolean isResourceLoaded() {
+            necessary();
+            return mBitmapCache.loadFinished();
+        }
+
+        /**
+         * Is resource ready
+         *
+         * @return
+         */
+        public static boolean isResourceReady(String url) {
+            necessary();
+            if (TextUtils.isEmpty(url)) {
+                return false;
+            }
+            Bitmap bitmap = mBitmapCache.loadBitmap(url, null);
+            if (bitmap == null) {
+                return false;
+            }
+            return true;
+        }
+
+        /**
+         * Is all resources ready
+         *
+         * @return
+         */
+        public static boolean isResourcesReady(List<String> urls) {
+            necessary();
+            if (urls == null) {
+                return false;
+            }
+            for (String url : urls) {
+                if (!isResourceReady(url)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        /**
+         * Returning internal {@link IBitmapManager}
+         *
+         * @return
+         */
+        public static IBitmapManager getBitmapProvider() {
+            necessary();
+            return mBitmapCache;
+        }
+
+
+        private static void necessary() {
+            if (mBitmapCache == null) {
+                throw new IllegalArgumentException("Not init yet! Please call #init(Context) in the first place.");
+            }
+        }
+    }
+
+
 }
