@@ -44,7 +44,7 @@ public class SimpleNextNoteCalculator implements INextNoteCalculator {
                 float gapX = (x - lastX) / ratio;
                 float gapY = (y - lastY) / ratio;
                 for (int i = 1; i <= ratio; i++) {
-                    GraffitiNoteData note = new GraffitiNoteData(layer, lastX + gapX - layer.getNoteWidth(), lastY + gapY - layer.getNoteHeight());
+                    GraffitiNoteData note = new GraffitiNoteData(layer, lastX + gapX * i, lastY + gapY * i);
                     Log.e(TAG, "add note -> " + note);
                     mPool.add(note);
                 }
