@@ -303,14 +303,14 @@ public class GraffitiBean implements Serializable {
         public static List<String> mTestUrls = new ArrayList();
 
         static {
-            mTestUrls.add("https://images.pexels.com/users/avatars/206851/min-an-377.jpeg?w=60&h=60&fit=crop&crop=faces");
-            mTestUrls.add("https://images.pexels.com/users/avatars/220024/daria-shevtsova-140.jpeg?w=60&h=60&fit=crop&crop=faces");
-            mTestUrls.add("https://images.pexels.com/users/avatars/26735/lisa-fotios-386.jpeg?w=60&h=60&fit=crop&crop=faces");
+            mTestUrls.add("https://alcdn.img.xiaoka.tv/20180315/25f/de5/0/25fde524fdc897b572691ea9d9375367.png");
+            mTestUrls.add("https://alcdn.img.xiaoka.tv/20180315/79f/000/0/79f0009b39aae27b2a84b6936c9b2ad8.png");
+            mTestUrls.add(" https://alcdn.img.xiaoka.tv/20180322/6f6/225/0/6f62255f7dca9be5ccacf52dcd66056f.png");
         }
 
         public static final GraffitiBean.GraffitiLayerBean buildTest() {
             GraffitiBean.GraffitiLayerBean bean = new GraffitiBean.GraffitiLayerBean();
-            bean.mAnimation = 1;
+            bean.mAnimation = -1;
             int p = (int) (System.currentTimeMillis() % 3);
             bean.mNoteDrawableRes = mTestUrls.get(p);
             return bean;

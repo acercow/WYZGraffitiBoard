@@ -1117,7 +1117,8 @@ public class GraffitiView extends ViewGroup {
 
         public SimpleCoordinateConverter(float percentageWidth, float percentageHeight, float viewWidth, float viewHeight) {
             mWidthFactor = percentageWidth / viewWidth;
-            mHeightFactor = percentageHeight / viewHeight;
+//            mHeightFactor = percentageHeight / viewHeight;
+            mHeightFactor = mWidthFactor;
         }
 
         @Override
