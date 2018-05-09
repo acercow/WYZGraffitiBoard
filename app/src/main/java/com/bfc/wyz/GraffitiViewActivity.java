@@ -95,19 +95,22 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
             @Override
             public void onComplete(Throwable e) {
                 Log.e(TAG, "onComplete e -> " + e);
-
                 Toast.makeText(GraffitiViewActivity.this, "Ready to show", Toast.LENGTH_SHORT).show();
 
                 mGraffitiView.setEnabled(true);
-
                 mGraffitiView.installData(finalGraffitiData);
 
                 //select a bean
                 mGraffitiView.setDrawObject(GraffitiBean.GraffitiLayerBean.buildTest());
-                mGraffitiView.setOnDataChangedCallback(new GraffitiView.IOnDataChangedCallback() {
+                mGraffitiView.setOnDataChangedCallback(new GraffitiView.ICallback() {
                     @Override
                     public void onDataChanged(GraffitiView graffitiView, GraffitiBean.GraffitiLayerBean drawingObject) {
                         Log.e(TAG, "onDataChanged -> " + graffitiView.getGraffitiData().getCurrentTotalNote());
+                    }
+
+                    @Override
+                    public void onMessage(int msg) {
+
                     }
                 });
             }
@@ -136,10 +139,8 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
                 break;
 
             case R.id.undo_last:
-
                 mGraffitiView.getGraffitiData().clearLayers();
                 mGraffitiView.notifyDataChanged();
-
                 break;
         }
     }

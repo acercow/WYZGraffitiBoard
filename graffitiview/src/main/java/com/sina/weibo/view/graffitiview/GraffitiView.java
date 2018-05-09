@@ -40,7 +40,23 @@ public class GraffitiView extends ViewGroup {
 
     private GraffitiBean.GraffitiLayerBean mDrawObject;
 
-    private IOnDataChangedCallback mOnDataChangedCallback;
+    private ICallback mCallback;
+
+    private ICallback mInternalCallback = new ICallback() {
+        @Override
+        public void onDataChanged(GraffitiView graffitiView, GraffitiBean.GraffitiLayerBean drawingObject) {
+            if (mCallback != null) {
+                mCallback.onDataChanged(graffitiView, drawingObject);
+            }
+        }
+
+        @Override
+        public void onMessage(int msg) {
+            if (mCallback != null) {
+                mCallback.onMessage(msg);
+            }
+        }
+    };
 
     private Runnable showNotes = new Runnable() {
         @Override
@@ -124,7 +140,8 @@ public class GraffitiView extends ViewGroup {
     public boolean onTouchEvent(MotionEvent event) {
         if (!isEnabled()) {
             Log.e(TAG, "View has been disabled.");
-            return super.onTouchEvent(event);
+            mInternalCallback.onMessage(ICallback.MSG_DISABLED);
+            return true;
         }
 
         final float pointX = event.getX();
@@ -161,7 +178,7 @@ public class GraffitiView extends ViewGroup {
             }
         }
 
-        return super.onTouchEvent(event);
+        return true;
     }
 
     /**
@@ -176,24 +193,31 @@ public class GraffitiView extends ViewGroup {
 
         if (mGraffitiData.isReadMode()) {
             Log.e(TAG, "player mode, just show notes");
+            mInternalCallback.onMessage(ICallback.MSG_READ_MODE);
             return false;
         }
 
         if (getMeasuredHeight() == 0 || getMeasuredWidth() == 0) {
             Log.e(TAG, "width or height is 0, getMeasuredWidth() -> " + getMeasuredWidth() + " getMeasuredHeight() -> " + getMeasuredHeight());
+            mInternalCallback.onMessage(ICallback.MSG_VIEW_NOT_READY);
             return false;
         }
 
         if (getCurrentDrawObject() == null) {
             Log.e(TAG, "GraffitiLayerBean is not set, can not draw.");
+            mInternalCallback.onMessage(ICallback.MSG_RESOURCE_NOT_READY);
             return false;
         }
 
-        if (!GraffitiResourcesManager.isResourceLoaded()) {
+        if (!mGraffitiData.isEnableRiskLoadResources() && !GraffitiResourcesManager.isResourceLoaded()) {
             Log.e(TAG, "resources is not ready, nothing to draw.");
+            mInternalCallback.onMessage(ICallback.MSG_RESOURCE_NOT_READY);
             return false;
-        } else if (!GraffitiResourcesManager.isResourceReady(getCurrentDrawObject().getNoteDrawableRes())) {
+        }
+
+        if (!GraffitiResourcesManager.isResourceReady(getCurrentDrawObject().getNoteDrawableRes())) {
             Log.e(TAG, "GraffitiLayerBean's resources is not ready, can not draw.");
+            mInternalCallback.onMessage(ICallback.MSG_RESOURCE_NOT_READY);
             return false;
         }
 
@@ -231,9 +255,7 @@ public class GraffitiView extends ViewGroup {
         post(new Runnable() {
             @Override
             public void run() {
-                if (mOnDataChangedCallback != null) {
-                    mOnDataChangedCallback.onDataChanged(GraffitiView.this, null);
-                }
+                mInternalCallback.onDataChanged(GraffitiView.this, null);
             }
         });
     }
@@ -260,8 +282,8 @@ public class GraffitiView extends ViewGroup {
             }
         }
 
-        if (notifyListener && mOnDataChangedCallback != null) {
-            mOnDataChangedCallback.onDataChanged(this, layerData.getGraffitiLayerBean());
+        if (notifyListener) {
+            mInternalCallback.onDataChanged(this, layerData.getGraffitiLayerBean());
         }
     }
 
@@ -296,18 +318,26 @@ public class GraffitiView extends ViewGroup {
 
 
     /**
-     * Setting {@link IOnDataChangedCallback}
+     * Setting {@link ICallback}
      *
      * @param callback
      */
-    public void setOnDataChangedCallback(IOnDataChangedCallback callback) {
-        mOnDataChangedCallback = callback;
+    public void setOnDataChangedCallback(ICallback callback) {
+        mCallback = callback;
     }
 
     /**
      * Callbacks when internal data changed.
      */
-    public interface IOnDataChangedCallback {
+    public interface ICallback {
+
+        int MSG_DISABLED = 1;
+
+        int MSG_READ_MODE = 2;
+
+        int MSG_VIEW_NOT_READY = 3;
+
+        int MSG_RESOURCE_NOT_READY = 4;
 
         /**
          * @param graffitiView  GraffitiView itself
@@ -315,6 +345,14 @@ public class GraffitiView extends ViewGroup {
          *                      May be null if flush change like stopAndClear or something.
          */
         void onDataChanged(GraffitiView graffitiView, GraffitiBean.GraffitiLayerBean drawingObject);
+
+
+        /**
+         * Notify messages
+         *
+         * @param msg
+         */
+        void onMessage(int msg);
     }
 
 
@@ -478,6 +516,14 @@ public class GraffitiView extends ViewGroup {
 
         private GraffitiBean mSource;
 
+
+        /**
+         * Whether we risk loading resources when {@link GraffitiResourcesManager#isResourceLoaded()} is negative.
+         * <p>
+         * When enable this, we get faster drawing, but unexcepted touch/read delay may occur sometimes.
+         */
+        private boolean mEnableRiskLoadResource = true;
+
         /**
          * Constructor from {@link GraffitiBean}, which should be installed later checked by {@link #isReadMode()}
          *
@@ -512,6 +558,15 @@ public class GraffitiView extends ViewGroup {
             return mSource != null;
         }
 
+
+        public boolean isEnableRiskLoadResources() {
+            return mEnableRiskLoadResource;
+        }
+
+
+        public void setEnableRiskLoadResources(boolean value) {
+            mEnableRiskLoadResource = value;
+        }
 
         /**
          * Adding layer
@@ -1000,7 +1055,7 @@ public class GraffitiView extends ViewGroup {
                     float gapX = (x - lastX) / ratio;
                     float gapY = (y - lastY) / ratio;
                     for (int i = 1; i <= ratio; i++) {
-                        GraffitiData.GraffitiLayerData.GraffitiNoteData note = new GraffitiData.GraffitiLayerData.GraffitiNoteData(layer, lastX + gapX - layer.getNoteWidth(), lastY + gapY - layer.getNoteHeight());
+                        GraffitiData.GraffitiLayerData.GraffitiNoteData note = new GraffitiData.GraffitiLayerData.GraffitiNoteData(layer, lastX + gapX * i, lastY + gapY * i);
                         Log.e(TAG, "add note -> " + note);
                         mPool.add(note);
                     }
@@ -1355,9 +1410,7 @@ public class GraffitiView extends ViewGroup {
      */
     public static class GraffitiResourcesManager {
 
-        static final String TAG = GraffitiResourcesManager.class.getSimpleName();
-
-        static IBitmapManager mBitmapCache;
+        static IBitmapManager mBitmapManager;
 
         /**
          * Bitmap downloader for {@link GraffitiResourcesManager}
@@ -1471,13 +1524,13 @@ public class GraffitiView extends ViewGroup {
             int mCompleteCounter;
 
             IBitmapManager mBitmapManager;
-
             Exception mLastException;
 
             public LoadsBitmapTask(IBitmapManager bitmapCache, List<String> urls) {
                 mBitmapManager = bitmapCache;
                 mUrls = new ArrayList<>(urls);
                 mCompleteCounter = urls.size();
+                Log.e(TAG, "mUrls -> " + mUrls + " mCompleteCounter -> " + mCompleteCounter);
             }
 
             public void addListener(IBitmapManager.IBitmapListener listener) {
@@ -1523,7 +1576,6 @@ public class GraffitiView extends ViewGroup {
                             stringBuilder.append(value + "\n");
                         }
                         mLastException = new NetworkErrorException(stringBuilder.toString());
-
                     }
                     onComplete(mLastException);
                 }
@@ -1539,7 +1591,7 @@ public class GraffitiView extends ViewGroup {
                 }
 
                 if (e != null && mRetryCounter > 0 && mBitmapManager != null) {
-                    Log.e(TAG, "check failed, retry ...");
+                    Log.e(TAG, "Failure checked, retry ...");
                     start();
                     mRetryCounter--;
                     return;
@@ -1574,19 +1626,17 @@ public class GraffitiView extends ViewGroup {
              * Start task
              */
             public void start() {
+                Log.v(TAG, "start");
                 if (mBitmapManager != null) {
                     for (String url : mUrls) {
                         mBitmapManager.loadBitmap(url, this);
                     }
                 }
             }
-
         }
 
 
         private static class MemoryBitmapManager implements IBitmapManager {
-
-            static boolean ENABLE_RISK = false;
 
             private Map<String, Bitmap> mCaches = new HashMap<>();
 
@@ -1603,6 +1653,7 @@ public class GraffitiView extends ViewGroup {
 
             @Override
             public Bitmap loadBitmap(final String url, final IBitmapListener listener) {
+                Log.v(TAG, "loadBitmap url -> " + url + " listener -> " + listener);
                 if (TextUtils.isEmpty(url)) {
                     return null;
                 }
@@ -1612,6 +1663,7 @@ public class GraffitiView extends ViewGroup {
                 download(url, new IBitmapListener() {
                     @Override
                     public void onStart(String url) {
+                        Log.v(TAG, "onStart -> " + url);
                         if (listener != null) {
                             listener.onStart(url);
                         }
@@ -1619,6 +1671,7 @@ public class GraffitiView extends ViewGroup {
 
                     @Override
                     public void onComplete(String url, Bitmap bitmap, Throwable e) {
+                        Log.v(TAG, "onComplete url -> " + url + " bitmap -> " + bitmap + " e -> " + e);
                         if (listener != null) {
                             listener.onComplete(url, bitmap, e);
                         }
@@ -1635,15 +1688,17 @@ public class GraffitiView extends ViewGroup {
                 return null;
             }
 
-
             @Override
             public void loadBitmaps(final List<String> urls, final IBitmapListener listener, boolean forceReload) {
+                Log.e(TAG, "loadBitmaps urls -> " + urls + " listener -> " + listener + " forceReload -> " + forceReload);
                 if (urls == null) {
+                    Log.e(TAG, "\t urls is null!");
                     listener.onComplete(new IllegalArgumentException("urls is null"));
                     return;
                 }
 
                 if (forceReload && mCurrentLoadBitmapsTask != null) {
+                    Log.e(TAG, "\t forceReload, clear current task");
                     mCurrentLoadBitmapsTask.stopAndClear();
                     mCurrentLoadBitmapsTask = null;
                 }
@@ -1653,6 +1708,7 @@ public class GraffitiView extends ViewGroup {
                     if (mCurrentLoadBitmapsTask.isTaskFinished()) {
                         listener.onComplete(mCurrentLoadBitmapsTask.mLastException);
                     } else {
+                        Log.v(TAG, "add listener to task ...");
                         mCurrentLoadBitmapsTask.addListener(listener);
                     }
                     return;
@@ -1682,16 +1738,18 @@ public class GraffitiView extends ViewGroup {
                         }
                     }
                 });
+                Log.e(TAG, "LoadsBitmapTask start successfully!");
                 mCurrentLoadBitmapsTask.start();
             }
 
             @Override
             public boolean loadFinished() {
-                return ENABLE_RISK || (mCurrentLoadBitmapsTask != null && mCurrentLoadBitmapsTask.isAllCompleted());
+                return (mCurrentLoadBitmapsTask != null && mCurrentLoadBitmapsTask.isAllCompleted());
             }
 
             @Override
             public void cache(String url, Bitmap bitmap) {
+                Log.v(TAG, "cache url -> " + url + " bitmap -> " + bitmap);
                 if (TextUtils.isEmpty(url) || bitmap == null) {
                     return;
                 }
@@ -1701,7 +1759,10 @@ public class GraffitiView extends ViewGroup {
             @Override
             public void clear() {
                 mCaches.clear();
-                mCurrentLoadBitmapsTask = null;
+                if (mCurrentLoadBitmapsTask != null) {
+                    mCurrentLoadBitmapsTask.stopAndClear();
+                    mCurrentLoadBitmapsTask = null;
+                }
             }
 
             @Override
@@ -1717,8 +1778,8 @@ public class GraffitiView extends ViewGroup {
          * @param downloader
          */
         public static void init(IBitmapDownloader downloader) {
-            if (mBitmapCache == null) {
-                mBitmapCache = new MemoryBitmapManager(downloader);
+            if (mBitmapManager == null) {
+                mBitmapManager = new MemoryBitmapManager(downloader);
             }
         }
 
@@ -1730,7 +1791,7 @@ public class GraffitiView extends ViewGroup {
          */
         public static void loadResources(List<String> urls, IBitmapManager.IBitmapListener listener, boolean forceReload) {
             necessary();
-            mBitmapCache.loadBitmaps(urls, listener, forceReload);
+            mBitmapManager.loadBitmaps(urls, listener, forceReload);
         }
 
         /**
@@ -1740,7 +1801,7 @@ public class GraffitiView extends ViewGroup {
          */
         public static boolean isResourceLoaded() {
             necessary();
-            return mBitmapCache.loadFinished();
+            return mBitmapManager.loadFinished();
         }
 
         /**
@@ -1750,11 +1811,13 @@ public class GraffitiView extends ViewGroup {
          */
         public static boolean isResourceReady(String url) {
             necessary();
+            Log.e(TAG, "isResourceReady -> " + url);
             if (TextUtils.isEmpty(url)) {
                 return false;
             }
-            Bitmap bitmap = mBitmapCache.loadBitmap(url, null);
+            Bitmap bitmap = mBitmapManager.loadBitmap(url, null);
             if (bitmap == null) {
+                Log.e(TAG, "\t bitmap is null !");
                 return false;
             }
             return true;
@@ -1785,12 +1848,12 @@ public class GraffitiView extends ViewGroup {
          */
         public static IBitmapManager getBitmapProvider() {
             necessary();
-            return mBitmapCache;
+            return mBitmapManager;
         }
 
 
         private static void necessary() {
-            if (mBitmapCache == null) {
+            if (mBitmapManager == null) {
                 throw new IllegalArgumentException("Not init yet! Please call #init(Context) in the first place.");
             }
         }

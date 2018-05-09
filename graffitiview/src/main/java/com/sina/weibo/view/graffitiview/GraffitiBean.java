@@ -141,19 +141,19 @@ public class GraffitiBean implements Serializable {
         private String id; //礼物id
 
         @SerializedName("canvas_width")
-        private float mPercentageCanvasWidth = 1.0f; //画布宽度
+        private float mPercentageCanvasWidth = 375.0f; //画布宽度
 
         @SerializedName("canvas_height")
-        private float mPercentageCanvasHeight = 1.0f; //画布高度
+        private float mPercentageCanvasHeight = 375.0f; //画布高度
 
         @SerializedName("width")
-        private float mPercentageNoteWidth = 0.06f;
+        private float mPercentageNoteWidth = 38.0f;
 
         @SerializedName("height")
-        private float mPercentageNoteHeight = 0.06f;
+        private float mPercentageNoteHeight = 38.0f;
 
         @SerializedName("distance")
-        private float mPercentageNoteDistance = 0.14f;
+        private float mPercentageNoteDistance = 39.0f;
 
         @SerializedName("url")
         private String mNoteDrawableRes;
@@ -163,6 +163,8 @@ public class GraffitiBean implements Serializable {
 
         @SerializedName("note")
         private List<GraffitiNoteBean> mNotes;
+
+        private int mGoldCoin; //用户购买小咖币数量
 
         public GraffitiLayerBean() {
 
@@ -252,7 +254,7 @@ public class GraffitiBean implements Serializable {
             this.mPercentageNoteDistance = percentageNoteDistance;
         }
 
-        public void setmNoteDrawableRes(String noteDrawableRes) {
+        public void setNoteDrawableRes(String noteDrawableRes) {
             this.mNoteDrawableRes = noteDrawableRes;
         }
 
@@ -262,6 +264,14 @@ public class GraffitiBean implements Serializable {
 
         public void setNotes(List<GraffitiNoteBean> notes) {
             this.mNotes = notes;
+        }
+
+        public int getGoldCoin() {
+            return mGoldCoin;
+        }
+
+        public void setGoldCoin(int goldcoin) {
+            this.mGoldCoin = goldcoin;
         }
 
         @Override
