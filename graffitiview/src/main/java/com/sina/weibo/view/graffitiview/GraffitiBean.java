@@ -104,19 +104,6 @@ public class GraffitiBean implements Serializable {
     }
 
     /**
-     * Initialize for IOS
-     *
-     * @param layerData
-     */
-    private void initializeForIOS(GraffitiView.GraffitiData.GraffitiLayerData layerData) {
-        if (width <= 0 || height <= 0) {
-            width = layerData.getCanvasWidth();
-            height = layerData.getCanvasHeight();
-        }
-    }
-
-
-    /**
      * convert to string
      *
      * @return
@@ -287,6 +274,7 @@ public class GraffitiBean implements Serializable {
         @Override
         public String toString() {
             return "[" +
+
                     "id:" + id +
                     "mPercentageCanvasWidth:" + mPercentageCanvasWidth +
                     ",mPercentageCanvasWidth:" + mPercentageCanvasWidth +
@@ -305,13 +293,13 @@ public class GraffitiBean implements Serializable {
         static {
             mTestUrls.add("https://alcdn.img.xiaoka.tv/20180315/25f/de5/0/25fde524fdc897b572691ea9d9375367.png");
             mTestUrls.add("https://alcdn.img.xiaoka.tv/20180315/79f/000/0/79f0009b39aae27b2a84b6936c9b2ad8.png");
-            mTestUrls.add(" https://alcdn.img.xiaoka.tv/20180322/6f6/225/0/6f62255f7dca9be5ccacf52dcd66056f.png");
+//            mTestUrls.add(" https://alcdn.img.xiaoka.tv/20180322/6f6/225/0/6f62255f7dca9be5ccacf52dcd66056f.png");
         }
 
         public static final GraffitiBean.GraffitiLayerBean buildTest() {
             GraffitiBean.GraffitiLayerBean bean = new GraffitiBean.GraffitiLayerBean();
             bean.mAnimation = -1;
-            int p = (int) (System.currentTimeMillis() % 3);
+            int p = (int) (System.currentTimeMillis() % 2);
             bean.mNoteDrawableRes = mTestUrls.get(p);
             return bean;
         }

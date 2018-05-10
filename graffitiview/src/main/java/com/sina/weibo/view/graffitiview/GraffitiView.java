@@ -42,21 +42,50 @@ public class GraffitiView extends ViewGroup {
 
     private ICallback mCallback;
 
-    private ICallback mInternalCallback = new ICallback() {
+    /**
+     * Callback Handler
+     */
+    class InternalCallback extends Handler implements ICallback {
+
+        final int ON_DATA_CHANGED = 1;
+        final int ON_MESSAGE = 2;
+
         @Override
-        public void onDataChanged(GraffitiView graffitiView, GraffitiBean.GraffitiLayerBean drawingObject) {
-            if (mCallback != null) {
-                mCallback.onDataChanged(graffitiView, drawingObject);
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            switch (msg.what) {
+                case ON_DATA_CHANGED:
+                    if (mCallback != null) {
+                        mCallback.onDataChanged(GraffitiView.this, (GraffitiBean.GraffitiLayerBean) msg.obj);
+                    }
+                    break;
+                case ON_MESSAGE:
+                    if (mCallback != null) {
+                        mCallback.onMessage(msg.arg1);
+                    }
+                    break;
             }
         }
 
         @Override
-        public void onMessage(int msg) {
-            if (mCallback != null) {
-                mCallback.onMessage(msg);
-            }
+        public void onDataChanged(GraffitiView graffitiView, GraffitiBean.GraffitiLayerBean drawingObject) {
+            mGraffitiData.updateTotalNoteNumber();
+            Message message = Message.obtain();
+            message.what = ON_DATA_CHANGED;
+            message.obj = drawingObject;
+            sendMessage(message);
         }
-    };
+
+        @Override
+        public void onMessage(int msg) {
+            Message message = Message.obtain();
+            message.what = ON_MESSAGE;
+            message.arg1 = msg;
+            sendMessage(message);
+        }
+    }
+
+    private ICallback mInternalCallback = new InternalCallback();
 
     private Runnable showNotes = new Runnable() {
         @Override
@@ -119,7 +148,6 @@ public class GraffitiView extends ViewGroup {
             View child = getChildAt(i);
             child.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
         }
-
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
     }
 
@@ -128,7 +156,7 @@ public class GraffitiView extends ViewGroup {
         int count = getChildCount();
         for (int i = 0; i < count; i++) {
             View child = getChildAt(i);
-            child.layout(l, t, r, b);
+            child.layout(0, 0, child.getMeasuredWidth(), child.getMeasuredHeight());
         }
     }
 
@@ -138,22 +166,18 @@ public class GraffitiView extends ViewGroup {
      */
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (!isEnabled()) {
-            Log.e(TAG, "View has been disabled.");
-            mInternalCallback.onMessage(ICallback.MSG_DISABLED);
+        //can not write
+        if (!checkWritable()) {
             return true;
         }
 
         final float pointX = event.getX();
         final float pointY = event.getY();
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
-            if (mDrawingLayer != null) {
-                throw new RuntimeException("How could mDrawingLayer not be null !");
-            }
-            if (checkWritable()) {
+            if (checkWritableActionDown()) {
                 mDrawingLayer = mGraffitiData.getDrawingLayer(getCurrentDrawObject());
                 mDrawingLayer.installView(getMeasuredWidth(), getMeasuredHeight());
-                if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY))) {
+                if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY, mGraffitiData.getLeftNoteNumber()))) {
                     notifyDataChanged(mDrawingLayer, true);
                 }
                 return true;
@@ -162,13 +186,13 @@ public class GraffitiView extends ViewGroup {
             // Checks for the event that occurs
             switch (event.getAction()) {
                 case MotionEvent.ACTION_MOVE:
-                    if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY))) {
+                    if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY, mGraffitiData.getLeftNoteNumber()))) {
                         notifyDataChanged(mDrawingLayer, true);
                     }
                     return true;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
-                    if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY))) {
+                    if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY, mGraffitiData.getLeftNoteNumber()))) {
                         notifyDataChanged(mDrawingLayer, true);
                     }
                     mDrawingLayer = null;
@@ -187,10 +211,33 @@ public class GraffitiView extends ViewGroup {
      * @return
      */
     protected boolean checkWritable() {
+        //check any time
+        if (!isEnabled()) {
+            Log.e(TAG, "View has been disabled.");
+            mInternalCallback.onMessage(ICallback.MSG_DISABLED);
+            return false;
+        }
+
         if (mGraffitiData == null) {
             throw new IllegalStateException("You have not call#installData(GraffitiData) to install data.");
         }
 
+        if (mGraffitiData.getLeftNoteNumber() <= 0) {
+            Log.e(TAG, "Reached max note number, can not draw.");
+            mInternalCallback.onMessage(ICallback.MSG_MAX_NOTE_REACHED);
+            return false;
+        }
+
+        return true;
+    }
+
+
+    /**
+     * Whether we can write or not.
+     *
+     * @return
+     */
+    protected boolean checkWritableActionDown() {
         if (mGraffitiData.isReadMode()) {
             Log.e(TAG, "player mode, just show notes");
             mInternalCallback.onMessage(ICallback.MSG_READ_MODE);
@@ -338,6 +385,8 @@ public class GraffitiView extends ViewGroup {
         int MSG_VIEW_NOT_READY = 3;
 
         int MSG_RESOURCE_NOT_READY = 4;
+
+        int MSG_MAX_NOTE_REACHED = 5;
 
         /**
          * @param graffitiView  GraffitiView itself
@@ -516,6 +565,9 @@ public class GraffitiView extends ViewGroup {
 
         private GraffitiBean mSource;
 
+        private int mMaxNoteNumber;
+
+        private int mTotalNoteNumber = 0;
 
         /**
          * Whether we risk loading resources when {@link GraffitiResourcesManager#isResourceLoaded()} is negative.
@@ -542,8 +594,8 @@ public class GraffitiView extends ViewGroup {
         /**
          * Default
          */
-        public GraffitiData() {
-
+        public GraffitiData(int maxNote) {
+            mMaxNoteNumber = maxNote;
         }
 
 
@@ -559,11 +611,41 @@ public class GraffitiView extends ViewGroup {
         }
 
 
+        /**
+         * Getting max note number.
+         *
+         * @return
+         */
+        public int getMaxNoteNumber() {
+            return mMaxNoteNumber;
+        }
+
+        /**
+         * Reached max note number or not.
+         *
+         * @return
+         */
+        public int getLeftNoteNumber() {
+            if (mMaxNoteNumber <= 0) {
+                return Integer.MAX_VALUE;
+            }
+            return mMaxNoteNumber - getCurrentTotalNote();
+        }
+
+        /**
+         * See {@link #mEnableRiskLoadResource} for detail
+         *
+         * @return
+         */
         public boolean isEnableRiskLoadResources() {
             return mEnableRiskLoadResource;
         }
 
-
+        /**
+         * See {@link #mEnableRiskLoadResource} for detail
+         *
+         * @return
+         */
         public void setEnableRiskLoadResources(boolean value) {
             mEnableRiskLoadResource = value;
         }
@@ -581,6 +663,7 @@ public class GraffitiView extends ViewGroup {
                 throw new IllegalArgumentException("layer already in GraffitiData");
             }
             mLayers.add(data);
+            updateTotalNoteNumber();
         }
 
         /**
@@ -592,6 +675,7 @@ public class GraffitiView extends ViewGroup {
             if (data != null) {
                 mLayers.remove(data);
             }
+            updateTotalNoteNumber();
         }
 
         /**
@@ -612,6 +696,7 @@ public class GraffitiView extends ViewGroup {
          */
         public void clearLayers() {
             mLayers.clear();
+            updateTotalNoteNumber();
         }
 
         public List<GraffitiLayerData> getLayers() {
@@ -627,17 +712,31 @@ public class GraffitiView extends ViewGroup {
             return mLayers == null ? 0 : mLayers.size();
         }
 
+
+        /**
+         * Update total note
+         *
+         * @return
+         */
+        public int updateTotalNoteNumber() {
+            int total = 0;
+            for (GraffitiLayerData layerData : mLayers) {
+                total += layerData.getNotes().size();
+            }
+            mTotalNoteNumber = total;
+            return mTotalNoteNumber;
+        }
+
         /**
          * Getting total note
          *
          * @return
          */
         public int getCurrentTotalNote() {
-            int total = 0;
-            for (GraffitiLayerData layerData : mLayers) {
-                total += layerData.getNotes().size();
+            if (mTotalNoteNumber <= 0 && getLayerCount() > 0) {
+                return updateTotalNoteNumber();
             }
-            return total;
+            return mTotalNoteNumber;
         }
 
         /**
@@ -660,7 +759,7 @@ public class GraffitiView extends ViewGroup {
         }
 
         public static final GraffitiData generateDefault() {
-            return new GraffitiData();
+            return new GraffitiData(0);
         }
 
         /**
@@ -1015,7 +1114,7 @@ public class GraffitiView extends ViewGroup {
          * @param relative
          * @return
          */
-        List<GraffitiData.GraffitiLayerData.GraffitiNoteData> next(GraffitiData.GraffitiLayerData layer, GraffitiData.GraffitiLayerData.GraffitiNoteData relative, float x, float y);
+        List<GraffitiData.GraffitiLayerData.GraffitiNoteData> next(GraffitiData.GraffitiLayerData layer, GraffitiData.GraffitiLayerData.GraffitiNoteData relative, float x, float y, int maxNotes);
     }
 
 
@@ -1037,7 +1136,7 @@ public class GraffitiView extends ViewGroup {
         }
 
         @Override
-        public List<GraffitiData.GraffitiLayerData.GraffitiNoteData> next(GraffitiData.GraffitiLayerData layer, GraffitiData.GraffitiLayerData.GraffitiNoteData relative, float x, float y) {
+        public List<GraffitiData.GraffitiLayerData.GraffitiNoteData> next(GraffitiData.GraffitiLayerData layer, GraffitiData.GraffitiLayerData.GraffitiNoteData relative, float x, float y, int maxNotes) {
             if (relative == null) {
                 GraffitiData.GraffitiLayerData.GraffitiNoteData note = new GraffitiData.GraffitiLayerData.GraffitiNoteData(layer, x, y);
                 Log.e(TAG, "add note -> " + note);
@@ -1054,7 +1153,7 @@ public class GraffitiView extends ViewGroup {
                     float ratio = distance / layer.getNoteDistance();
                     float gapX = (x - lastX) / ratio;
                     float gapY = (y - lastY) / ratio;
-                    for (int i = 1; i <= ratio; i++) {
+                    for (int i = 1; i <= ratio && i <= maxNotes; i++) {
                         GraffitiData.GraffitiLayerData.GraffitiNoteData note = new GraffitiData.GraffitiLayerData.GraffitiNoteData(layer, lastX + gapX * i, lastY + gapY * i);
                         Log.e(TAG, "add note -> " + note);
                         mPool.add(note);
@@ -1410,6 +1509,8 @@ public class GraffitiView extends ViewGroup {
      * {@link #isResourceReady(String)}
      */
     public static class GraffitiResourcesManager {
+
+        static String TAG = GraffitiResourcesManager.class.getSimpleName();
 
         static IBitmapManager mBitmapManager;
 
