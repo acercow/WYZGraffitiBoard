@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -17,9 +18,12 @@ import com.nostra13.universalimageloader.core.assist.FailReason;
 import com.nostra13.universalimageloader.core.listener.ImageLoadingListener;
 import com.sina.weibo.view.graffitiview.GraffitiBean;
 import com.sina.weibo.view.graffitiview.GraffitiView;
+import com.sina.weibo.view.graffitiview.SimpleGraffitiBitmapProvider;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.io.File;
 
 public class GraffitiViewActivity extends Activity implements View.OnClickListener {
 
@@ -27,9 +31,9 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
 
     private GraffitiView mGraffitiView;
 
-    static GraffitiView.GraffitiResourcesManager.IBitmapDownloader mDownloader = new GraffitiView.GraffitiResourcesManager.IBitmapDownloader() {
+    static SimpleGraffitiBitmapProvider.IBitmapDownloader mDownloader = new SimpleGraffitiBitmapProvider.IBitmapDownloader() {
         @Override
-        public void download(final String url, final GraffitiView.GraffitiResourcesManager.IBitmapManager.IBitmapListener listener) {
+        public void download(final String url, final SimpleGraffitiBitmapProvider.IBitmapDownloader.IBitmapDownloadListener listener) {
             ImageLoader.getInstance().loadImage(url, new ImageLoadingListener() {
                 @Override
                 public void onLoadingStarted(String s, View view) {
@@ -60,6 +64,26 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
                 }
             });
         }
+
+        @Override
+        public Bitmap loadCache(String url) {
+            Bitmap bitmap = ImageLoader.getInstance().getMemoryCache().get(url);
+            if (bitmap != null && !bitmap.isRecycled()) {
+                return bitmap;
+            }
+
+            File f = ImageLoader.getInstance().getDiskCache().get(url);
+            if (f != null && f.exists()) {
+                bitmap = BitmapFactory.decodeFile(f.getPath());
+                if (bitmap != null) {
+                    ImageLoader.getInstance().getMemoryCache().put(url, bitmap);
+                }
+                return bitmap;
+            }
+
+            return null;
+        }
+
     };
 
     static final String KEY_GRAFFITI_BEAN = "key_graffiti_bean";
@@ -67,40 +91,23 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.graffiti_act);
+        mGraffitiView = (GraffitiView) findViewById(R.id.graffiti_view);
+        mGraffitiView.setEnabled(false);
+
+        ImageLoader.getInstance().init(ImageLoaderConfiguration.createDefault(getApplicationContext()));
+
+        SimpleGraffitiBitmapProvider.getInstance(mDownloader);
 
         GraffitiView.GraffitiData graffitiData = null;
         if (getIntent().getSerializableExtra(KEY_GRAFFITI_BEAN) instanceof GraffitiBean) {
             GraffitiBean graffitiBean = (GraffitiBean) getIntent().getSerializableExtra(KEY_GRAFFITI_BEAN);
-            graffitiData = new GraffitiView.GraffitiData(graffitiBean);
-
+            graffitiData = new GraffitiView.GraffitiData(SimpleGraffitiBitmapProvider.getInstance(mDownloader), graffitiBean);
+        } else {
+            graffitiData = new GraffitiView.GraffitiData(SimpleGraffitiBitmapProvider.getInstance(mDownloader), 0);
         }
 
-
-        ImageLoader.getInstance().init(ImageLoaderConfiguration.createDefault(getApplicationContext()));
-        setContentView(R.layout.graffiti_act);
-
-        // init resource manager
-        GraffitiView.GraffitiResourcesManager.init(mDownloader);
-
-        mGraffitiView = (GraffitiView) findViewById(R.id.graffiti_view);
-        mGraffitiView.setEnabled(false);
-
-        //select a bean
-        mGraffitiView.setDrawObject(GraffitiBean.GraffitiLayerBean.buildTest());
-        mGraffitiView.setOnDataChangedCallback(new GraffitiView.ICallback() {
-            @Override
-            public void onDataChanged(GraffitiView graffitiView, GraffitiBean.GraffitiLayerBean drawingObject) {
-                Log.e(TAG, "onDataChanged -> " + graffitiView.getGraffitiData().getCurrentTotalNote());
-            }
-
-            @Override
-            public void onMessage(int msg) {
-
-            }
-        });
-
-        // load all resources
-        GraffitiView.GraffitiResourcesManager.loadResources(GraffitiBean.GraffitiLayerBean.mTestUrls, new GraffitiView.GraffitiResourcesManager.IBitmapManager.IBitmapListener() {
+        SimpleGraffitiBitmapProvider.getInstance(mDownloader).download(GraffitiBean.GraffitiLayerBean.mTestUrls, new SimpleGraffitiBitmapProvider.IBitmapDownloader.IBitmapDownloadListener() {
             @Override
             public void onStart(String url) {
                 Log.e(TAG, "onStart -> " + url);
@@ -118,16 +125,30 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
             }
         }, false);
 
-        mGraffitiView.setEnabled(true);
+        //select a bean
+        mGraffitiView.setDrawObject(GraffitiBean.GraffitiLayerBean.buildTest());
+        mGraffitiView.setCallbacks(new GraffitiView.ICallback() {
+            @Override
+            public void onDataChanged(GraffitiView graffitiView, GraffitiBean.GraffitiLayerBean drawingObject) {
+                Log.e(TAG, "onDataChanged -> " + graffitiView.getGraffitiData().getCurrentTotalNote());
+            }
+
+            @Override
+            public void onMessage(int msg) {
+
+            }
+        });
+
         mGraffitiView.installData(graffitiData);
+        mGraffitiView.setEnabled(true);
 
-
-        ScaleAnimation scaleAnimation = new ScaleAnimation(1.0f, 0.5f, 1.0f, 0.5f, ScaleAnimation.RELATIVE_TO_SELF, 0.5f, ScaleAnimation.RELATIVE_TO_SELF, 0.5f);
-        scaleAnimation.setRepeatCount(1);
-        scaleAnimation.setRepeatMode(Animation.REVERSE);
-        scaleAnimation.setDuration(1000);
-        mGraffitiView.startAnimation(scaleAnimation);
-
+        if (graffitiData.isReadMode()) {
+            ScaleAnimation scaleAnimation = new ScaleAnimation(1.0f, 0.5f, 1.0f, 0.5f, ScaleAnimation.RELATIVE_TO_SELF, 0.5f, ScaleAnimation.RELATIVE_TO_SELF, 0.5f);
+            scaleAnimation.setRepeatCount(1);
+            scaleAnimation.setRepeatMode(Animation.REVERSE);
+            scaleAnimation.setDuration(1000);
+            mGraffitiView.startAnimation(scaleAnimation);
+        }
     }
 
 

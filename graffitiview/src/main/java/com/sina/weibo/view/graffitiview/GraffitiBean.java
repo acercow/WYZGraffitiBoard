@@ -255,10 +255,10 @@ public class GraffitiBean implements Serializable {
 
         public class GraffitiNoteBean implements Serializable {
 
-            @SerializedName("mDeviceX")
+            @SerializedName("x")
             private float mDeviceX;
 
-            @SerializedName("mDeviceY")
+            @SerializedName("y")
             private float mDeviceY;
 
             public GraffitiNoteBean() {
