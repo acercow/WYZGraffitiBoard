@@ -17,7 +17,6 @@ public class GraffitiBean implements Serializable {
 
     static Gson GSON = new Gson();
 
-
     @SerializedName("layer")
     private List<GraffitiLayerBean> mLayers;
 
@@ -33,73 +32,66 @@ public class GraffitiBean implements Serializable {
      * ios需要 对应的画布宽度
      */
     @SerializedName("width")
-    private float width; //图层宽度
+    private float drawDeviceWidth = ReferenceCanvasWidth; //图层宽度
 
     /**
      * ios需要 对应的画布高度
      */
     @SerializedName("height")
-    private float height; //图层高度
+    private float drawDeviceHeight = ReferenceCanvasHeight; //图层高度
+
+
+    private transient int maxNoteNumber;
+
+    /**
+     * {@link GraffitiLayerBean} 's reference canvas drawDeviceWidth/devices drawDeviceWidth
+     * <p>
+     * 标注图画布宽度
+     */
+    public transient static final float ReferenceCanvasWidth = 375.0f;
+
+    /**
+     * {@link GraffitiLayerBean} 's reference canvas drawDeviceHeight/devices drawDeviceHeight
+     * <p>
+     * 标注图画布高度
+     */
+    public transient static final float ReferenceCanvasHeight = 332.0f;
+
+
+    public float getDrawDeviceWidth() {
+        return drawDeviceWidth;
+    }
+
+    public float getDrawDeviceHeight() {
+        return drawDeviceHeight;
+    }
 
     public GraffitiBean() {
 
     }
 
+    @Override
+    public String toString() {
+        return "[" +
+                "type:" + type +
+                ",ReferenceCanvasWidth:" + ReferenceCanvasWidth +
+                ",ReferenceCanvasHeight:" + ReferenceCanvasWidth +
+                ",maxNoteNumber:" + maxNoteNumber +
+                ",drawDeviceWidth:" + drawDeviceWidth +
+                ",drawDeviceHeight:" + drawDeviceHeight +
+                ",mLayers:" + mLayers +
+                "]";
+    }
 
     public GraffitiBean(GraffitiView.GraffitiData graffitiData) {
         this();
+        drawDeviceWidth = graffitiData.getCanvasWidth();
+        drawDeviceHeight = graffitiData.getCanvasHeight();
         mLayers = new ArrayList<>();
+        maxNoteNumber = graffitiData.getMaxNoteNumber();
         for (GraffitiView.GraffitiData.GraffitiLayerData layerData : graffitiData.getLayers()) {
             GraffitiBean.GraffitiLayerBean bean = new GraffitiBean.GraffitiLayerBean(layerData);
             mLayers.add(bean);
-        }
-        initializeNotesFromPercentage(graffitiData);
-    }
-
-    /**
-     * For ios
-     * <p>
-     * Convert all notes to percentage coordinate
-     */
-    public void initializeNotesToPercentage() {
-        if (width != 0 && height != 0) {
-            if (mLayers != null) {
-                for (GraffitiLayerBean layerBean : mLayers) {
-                    if (layerBean.mNotes != null) {
-                        for (GraffitiLayerBean.GraffitiNoteBean noteBean : layerBean.mNotes) {
-                            if (noteBean.mPercentageX > 1 || noteBean.mPercentageY > 1) {
-                                noteBean.mPercentageX = noteBean.mPercentageX / width;
-                                noteBean.mPercentageY = noteBean.mPercentageY / height;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-
-    /**
-     * For ios
-     * <p>
-     * Convert all notes to percentage coordinate
-     */
-    public void initializeNotesFromPercentage(GraffitiView.GraffitiData graffitiData) {
-        if (mLayers != null && mLayers.size() > 0) {
-            if (width <= 0 || height <= 0) {
-                width = graffitiData.getLastLayer().getCanvasWidth();
-                height = graffitiData.getLastLayer().getCanvasHeight();
-            }
-            for (GraffitiLayerBean bean : mLayers) {
-                if (bean.mNotes != null) {
-                    for (GraffitiLayerBean.GraffitiNoteBean noteBean : bean.mNotes) {
-                        if (noteBean.mPercentageX <= 1 || noteBean.mPercentageY <= 1) {
-                            noteBean.mPercentageX = noteBean.mPercentageX * width;
-                            noteBean.mPercentageY = noteBean.mPercentageY * height;
-                        }
-                    }
-                }
-            }
         }
     }
 
@@ -110,6 +102,10 @@ public class GraffitiBean implements Serializable {
      */
     public String toJson() {
         return GSON.toJson(this);
+    }
+
+    public static GraffitiBean fromJson(String jsonObject) {
+        return GSON.fromJson(jsonObject, GraffitiBean.class);
     }
 
     /**
@@ -125,32 +121,23 @@ public class GraffitiBean implements Serializable {
     public static class GraffitiLayerBean implements Serializable {
 
         @SerializedName("gift_id")
-        private String id; //礼物id
+        private String id = "123"; //礼物id
 
-        @SerializedName("canvas_width")
-        private float mPercentageCanvasWidth = 375.0f; //画布宽度
+        private transient final static float mReferenceNoteWidth = 38.0f;
 
-        @SerializedName("canvas_height")
-        private float mPercentageCanvasHeight = 375.0f; //画布高度
+        private transient final static float mReferenceNoteHeight = 38.0f;
 
-        @SerializedName("width")
-        private float mPercentageNoteWidth = 38.0f;
-
-        @SerializedName("height")
-        private float mPercentageNoteHeight = 38.0f;
-
-        @SerializedName("distance")
-        private float mPercentageNoteDistance = 39.0f;
+        private transient final static float mReferenceNoteDistance = 39.0f;
 
         @SerializedName("url")
         private String mNoteDrawableRes;
 
-        @SerializedName("animation")
-        private int mAnimation;
+        private transient final static int mAnimation = -1;
 
         @SerializedName("note")
         private List<GraffitiNoteBean> mNotes;
 
+        @SerializedName("gold_coin")
         private int mGoldCoin; //用户购买小咖币数量
 
         public GraffitiLayerBean() {
@@ -166,14 +153,9 @@ public class GraffitiBean implements Serializable {
         public GraffitiLayerBean(GraffitiView.GraffitiData.GraffitiLayerData layerData) {
             this();
             GraffitiBean.GraffitiLayerBean bean = layerData.getGraffitiLayerBean();
-            this.id = bean.id;
-            this.mPercentageCanvasWidth = bean.mPercentageCanvasWidth;
-            this.mPercentageCanvasHeight = bean.mPercentageCanvasHeight;
-            this.mPercentageNoteWidth = bean.mPercentageNoteWidth;
-            this.mPercentageNoteHeight = bean.mPercentageNoteHeight;
-            this.mPercentageNoteDistance = bean.mPercentageNoteDistance;
-            this.mNoteDrawableRes = bean.mNoteDrawableRes;
-            this.mAnimation = bean.mAnimation;
+            id = bean.id;
+            mNoteDrawableRes = bean.mNoteDrawableRes;
+            mGoldCoin = bean.mGoldCoin;
             mNotes = new ArrayList<>();
             for (GraffitiView.GraffitiData.GraffitiLayerData.GraffitiNoteData noteData : layerData.getNotes()) {
                 GraffitiBean.GraffitiLayerBean.GraffitiNoteBean b = new GraffitiBean.GraffitiLayerBean.GraffitiNoteBean(noteData);
@@ -185,24 +167,16 @@ public class GraffitiBean implements Serializable {
             return id;
         }
 
-        public float getPercentageCanvasWidth() {
-            return mPercentageCanvasWidth;
-        }
-
-        public float getPercentageCanvasHeight() {
-            return mPercentageCanvasHeight;
-        }
-
         public float getPercentageNoteWidth() {
-            return mPercentageNoteWidth;
+            return mReferenceNoteWidth;
         }
 
         public float getPercentageNoteHeight() {
-            return mPercentageNoteHeight;
+            return mReferenceNoteHeight;
         }
 
         public float getPercentageNoteDistance() {
-            return mPercentageNoteDistance;
+            return mReferenceNoteDistance;
         }
 
         public String getNoteDrawableRes() {
@@ -221,32 +195,8 @@ public class GraffitiBean implements Serializable {
             this.id = id;
         }
 
-        public void setPercentageCanvasWidth(float percentageCanvasWidth) {
-            this.mPercentageCanvasWidth = percentageCanvasWidth;
-        }
-
-        public void setPercentageCanvasHeight(float percentageCanvasHeight) {
-            this.mPercentageCanvasHeight = percentageCanvasHeight;
-        }
-
-        public void setPercentageNoteWidth(float percentageNoteWidth) {
-            this.mPercentageNoteWidth = percentageNoteWidth;
-        }
-
-        public void setPercentageNoteHeight(float percentageNoteHeight) {
-            this.mPercentageNoteHeight = percentageNoteHeight;
-        }
-
-        public void setPercentageNoteDistance(float percentageNoteDistance) {
-            this.mPercentageNoteDistance = percentageNoteDistance;
-        }
-
         public void setNoteDrawableRes(String noteDrawableRes) {
             this.mNoteDrawableRes = noteDrawableRes;
-        }
-
-        public void setAnimation(int animation) {
-            this.mAnimation = animation;
         }
 
         public void setNotes(List<GraffitiNoteBean> notes) {
@@ -264,7 +214,7 @@ public class GraffitiBean implements Serializable {
         @Override
         public boolean equals(Object obj) {
             if (obj instanceof GraffitiBean.GraffitiLayerBean) {
-                if (TextUtils.isEmpty(id) && id.equals(((GraffitiBean.GraffitiLayerBean) obj).getId())) {
+                if (!TextUtils.isEmpty(id) && id.equals(((GraffitiBean.GraffitiLayerBean) obj).getId())) {
                     return true;
                 }
             }
@@ -276,11 +226,9 @@ public class GraffitiBean implements Serializable {
             return "[" +
 
                     "id:" + id +
-                    "mPercentageCanvasWidth:" + mPercentageCanvasWidth +
-                    ",mPercentageCanvasWidth:" + mPercentageCanvasWidth +
-                    ",mPercentageNoteWidth:" + mPercentageNoteWidth +
-                    ",mPercentageNoteHeight:" + mPercentageNoteHeight +
-                    ",mPercentageNoteDistance:" + mPercentageNoteDistance +
+                    ",mReferenceNoteWidth:" + mReferenceNoteWidth +
+                    ",mReferenceNoteHeight:" + mReferenceNoteHeight +
+                    ",mReferenceNoteDistance:" + mReferenceNoteDistance +
                     ",mNoteDrawableRes:" + mNoteDrawableRes +
                     ",mAnimation:" + mAnimation +
                     ",mNotes:" + mNotes +
@@ -298,22 +246,20 @@ public class GraffitiBean implements Serializable {
 
         public static final GraffitiBean.GraffitiLayerBean buildTest() {
             GraffitiBean.GraffitiLayerBean bean = new GraffitiBean.GraffitiLayerBean();
-            bean.mAnimation = -1;
             int p = (int) (System.currentTimeMillis() % 2);
             bean.mNoteDrawableRes = mTestUrls.get(p);
+            bean.id = String.valueOf(p);
             return bean;
         }
 
+
         public class GraffitiNoteBean implements Serializable {
 
-            @SerializedName("x")
-            private float mPercentageX;
+            @SerializedName("mDeviceX")
+            private float mDeviceX;
 
-            @SerializedName("y")
-            private float mPercentageY;
-
-            @SerializedName("time")
-            private long mTime;
+            @SerializedName("mDeviceY")
+            private float mDeviceY;
 
             public GraffitiNoteBean() {
                 // do nothing by default
@@ -321,16 +267,27 @@ public class GraffitiBean implements Serializable {
 
             public GraffitiNoteBean(GraffitiView.GraffitiData.GraffitiLayerData.GraffitiNoteData noteData) {
                 this();
-                mPercentageX = noteData.getLayerData().getCoordinateConverter().convertWidthPixelToPercentage(noteData.getOriginalRectF().centerX());
-                mPercentageY = noteData.getLayerData().getCoordinateConverter().convertHeightPixelToPercentage(noteData.getOriginalRectF().centerY());
+                mDeviceX = noteData.getOriginalRectF().centerX();
+                mDeviceY = noteData.getOriginalRectF().centerY();
             }
 
-            public float getPercentageX() {
-                return mPercentageX;
+
+            /**
+             * DEVICE descriptions. See {@link GraffitiView} 's doc.
+             *
+             * @return
+             */
+            public float getDeviceX() {
+                return mDeviceX;
             }
 
-            public float getPercentageY() {
-                return mPercentageY;
+            /**
+             * DEVICE descriptions. See {@link GraffitiView} 's doc.
+             *
+             * @return
+             */
+            public float getDeviceY() {
+                return mDeviceY;
             }
         }
     }

@@ -25,12 +25,16 @@ import java.util.Map;
 /**
  * Created by fishyu on 2018/4/28.
  * <p>
- * TWO MODE:(See {@link GraffitiData} for more detail)
+ * Two mode:(See {@link GraffitiData} for more detail)
  * 1,READ-MODE
  * 2,WRITE-MODE
+ * <p>
+ * Three location descriptions:<br>
+ * 1, REFERENCE 参考坐标，是指此数值由UI提供,如 {@link com.sina.weibo.view.graffitiview.GraffitiBean.GraffitiLayerBean}<br>
+ * 2, DEVICE 礼物绘制机制的坐标，比如 IOS提供的数据，DEVICE坐标存在于 {@link com.sina.weibo.view.graffitiview.GraffitiBean.GraffitiLayerBean.GraffitiNoteBean} 中<br>
+ * 3, PIXEL 本地坐标，所有本机器的的坐标为含有 PIXEL 字段，如 {@link com.sina.weibo.view.graffitiview.GraffitiBean.GraffitiLayerBean}<br>
  */
 public class GraffitiView extends ViewGroup {
-
     static final String TAG = GraffitiView.class.getSimpleName();
 
     private INextNoteCalculator mNoteCalculator;
@@ -124,25 +128,43 @@ public class GraffitiView extends ViewGroup {
         if (initData == null) {
             initData = GraffitiData.generateDefault();
         }
+        Log.e(TAG, "installData -> " + initData);
+
+        if (mGraffitiData != null) {
+            // clear all views
+            removeAllViews();
+        }
+
         mNoteCalculator = new SimpleNextNoteCalculator();
         mGraffitiData = initData;
 
         mDrawingLayer = null;
-        // set view's information if needed
-        onSizeChanged(getMeasuredWidth(), getMeasuredHeight(), 0, 0);
 
-        //reading exits data
-        if (initData.isReadMode()) {
-            post(showNotes);
+        //data installed, refresh view
+        invalidate();
+        requestLayout();
+
+        //invoke on size changed
+        if (getMeasuredWidth() > 0 && getMeasuredHeight() > 0) {
+            post(new Runnable() {
+                @Override
+                public void run() {
+                    onSizeChanged(getMeasuredWidth(), getMeasuredHeight(), 0, 0);
+                }
+            });
         }
+
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        Log.e(TAG, "onMeasure mGraffitiData -> " + mGraffitiData);
         // square this view
-        heightMeasureSpec = widthMeasureSpec;
         final int width = MeasureSpec.getSize(widthMeasureSpec);
+        heightMeasureSpec = MeasureSpec.makeMeasureSpec((int) (width / GraffitiData.getWidthHeightPercentage()), MeasureSpec.EXACTLY);
+
         final int height = MeasureSpec.getSize(heightMeasureSpec);
+
         int count = getChildCount();
         for (int i = 0; i < count; i++) {
             View child = getChildAt(i);
@@ -153,10 +175,35 @@ public class GraffitiView extends ViewGroup {
 
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
-        int count = getChildCount();
-        for (int i = 0; i < count; i++) {
-            View child = getChildAt(i);
-            child.layout(0, 0, child.getMeasuredWidth(), child.getMeasuredHeight());
+        Log.e(TAG, "onLayout mGraffitiData -> " + mGraffitiData);
+
+        if (mGraffitiData != null) {
+            int count = getChildCount();
+            for (int i = 0; i < count; i++) {
+                View child = getChildAt(i);
+                child.layout(0, 0, child.getMeasuredWidth(), child.getMeasuredHeight());
+            }
+        }
+    }
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        Log.e(TAG, "onSizeChanged mGraffitiData -> " + mGraffitiData);
+
+        if (mGraffitiData != null) {
+            if (w != oldw || h != oldh) {
+                if (w >= 0 && h >= 0) {
+                    if (mGraffitiData.installView(w, h)) {
+                        Log.e(TAG, "View installed, all data is ready.");
+                        if (mGraffitiData.isReadMode()) {
+                            Log.e(TAG, "read mode, ready to show layers.");
+                            mGraffitiData.installLayers();
+                            post(showNotes);
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -166,6 +213,7 @@ public class GraffitiView extends ViewGroup {
      */
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        Log.v(TAG, "onTouchEvent");
         //can not write
         if (!checkWritable()) {
             return true;
@@ -176,8 +224,7 @@ public class GraffitiView extends ViewGroup {
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
             if (checkWritableActionDown()) {
                 mDrawingLayer = mGraffitiData.getDrawingLayer(getCurrentDrawObject());
-                mDrawingLayer.installView(getMeasuredWidth(), getMeasuredHeight());
-                if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY, mGraffitiData.getLeftNoteNumber()))) {
+                if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, null, pointX, pointY, mGraffitiData.getLeftNoteNumber()))) {
                     notifyDataChanged(mDrawingLayer, true);
                 }
                 return true;
@@ -195,7 +242,6 @@ public class GraffitiView extends ViewGroup {
                     if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY, mGraffitiData.getLeftNoteNumber()))) {
                         notifyDataChanged(mDrawingLayer, true);
                     }
-                    mDrawingLayer = null;
                     return true;
                 default:
                     return true;
@@ -218,16 +264,21 @@ public class GraffitiView extends ViewGroup {
             return false;
         }
 
+        if (getMeasuredHeight() == 0 || getMeasuredWidth() == 0) {
+            Log.e(TAG, "width or height is 0, getMeasuredWidth() -> " + getMeasuredWidth() + " getMeasuredHeight() -> " + getMeasuredHeight());
+            mInternalCallback.onMessage(ICallback.MSG_VIEW_NOT_READY);
+            return false;
+        }
+
         if (mGraffitiData == null) {
             throw new IllegalStateException("You have not call#installData(GraffitiData) to install data.");
         }
 
-        if (mGraffitiData.getLeftNoteNumber() <= 0) {
-            Log.e(TAG, "Reached max note number, can not draw.");
-            mInternalCallback.onMessage(ICallback.MSG_MAX_NOTE_REACHED);
+        if (!mGraffitiData.isViewInstalled()) {
+            Log.e(TAG, "GraffitiData is not installed");
+            mInternalCallback.onMessage(ICallback.MSG_GRAFFITIDATA_NOT_INSTALLED);
             return false;
         }
-
         return true;
     }
 
@@ -244,9 +295,9 @@ public class GraffitiView extends ViewGroup {
             return false;
         }
 
-        if (getMeasuredHeight() == 0 || getMeasuredWidth() == 0) {
-            Log.e(TAG, "width or height is 0, getMeasuredWidth() -> " + getMeasuredWidth() + " getMeasuredHeight() -> " + getMeasuredHeight());
-            mInternalCallback.onMessage(ICallback.MSG_VIEW_NOT_READY);
+        if (mGraffitiData.getLeftNoteNumber() <= 0) {
+            Log.e(TAG, "Reached max note number, can not draw.");
+            mInternalCallback.onMessage(ICallback.MSG_MAX_NOTE_REACHED);
             return false;
         }
 
@@ -341,7 +392,7 @@ public class GraffitiView extends ViewGroup {
      * @return
      */
     protected GraffitiBean.GraffitiLayerBean getCurrentDrawObject() {
-        return mDrawObject;
+        return GraffitiBean.GraffitiLayerBean.buildTest();
     }
 
     /**
@@ -350,9 +401,11 @@ public class GraffitiView extends ViewGroup {
      * @param layerBean
      */
     public void setDrawObject(GraffitiBean.GraffitiLayerBean layerBean) {
+        if (layerBean != mDrawObject) {
+            mDrawingLayer = null;
+        }
         mDrawObject = layerBean;
     }
-
 
     /**
      * Getting internal {@link GraffitiData} witch drives {@link GraffitiView}.
@@ -387,6 +440,8 @@ public class GraffitiView extends ViewGroup {
         int MSG_RESOURCE_NOT_READY = 4;
 
         int MSG_MAX_NOTE_REACHED = 5;
+
+        int MSG_GRAFFITIDATA_NOT_INSTALLED = 6;
 
         /**
          * @param graffitiView  GraffitiView itself
@@ -448,21 +503,6 @@ public class GraffitiView extends ViewGroup {
             invalidate();
         }
 
-
-        @Override
-        protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-            super.onSizeChanged(w, h, oldw, oldh);
-            if (w != oldw || h != oldh) {
-                if (w >= 0 && h >= 0) {
-                    if (getLayerData().installView(w, h)) {
-                        if (getLayerData().isReadMode()) {
-                            getLayerData().installNotes();
-                            notifyDataChanged();
-                        }
-                    }
-                }
-            }
-        }
 
         @Override
         protected void onAttachedToWindow() {
@@ -558,12 +598,13 @@ public class GraffitiView extends ViewGroup {
      */
     public static class GraffitiData {
 
+
         /**
          * 图层
          */
         private List<GraffitiLayerData> mLayers = new ArrayList<>();
 
-        private GraffitiBean mSource;
+        private GraffitiBean mGraffitiBean;
 
         private int mMaxNoteNumber;
 
@@ -577,19 +618,70 @@ public class GraffitiView extends ViewGroup {
         private boolean mEnableRiskLoadResource = true;
 
         /**
+         * Used for calculate layer info
+         */
+        private ICoordinateConverter mCoordinateConverter;
+
+        private float mCanvasWidth;
+
+        private float mCanvasHeight;
+
+        /**
          * Constructor from {@link GraffitiBean}, which should be installed later checked by {@link #isReadMode()}
          *
          * @param graffitiBean
          */
         public GraffitiData(GraffitiBean graffitiBean) {
-            mSource = graffitiBean;
-            graffitiBean.initializeNotesToPercentage();
-            for (GraffitiBean.GraffitiLayerBean bean : graffitiBean.getLayers()) {
-                GraffitiData.GraffitiLayerData layerData = new GraffitiData.GraffitiLayerData(bean);
-                addLayer(layerData);
-            }
+            mGraffitiBean = graffitiBean;
         }
 
+        /**
+         * Install view
+         *
+         * @param viewWidth
+         * @param viewHeight
+         */
+        public boolean installView(float viewWidth, float viewHeight) {
+            if (viewWidth <= 0 || viewHeight <= 0) {
+                throw new IllegalArgumentException("viewWidth or viewHeight must > 0, viewWidth -> " + viewWidth + " viewHeight -> " + viewHeight);
+            }
+
+            if (viewWidth == mCanvasWidth && viewHeight == mCanvasHeight) {
+                //installData already
+                return false;
+            }
+
+            mCoordinateConverter = new SimpleCoordinateConverter(GraffitiBean.ReferenceCanvasWidth, GraffitiBean.ReferenceCanvasHeight, viewWidth, viewHeight);
+
+            mCanvasWidth = viewWidth;
+            mCanvasHeight = viewHeight;
+
+            // GraffitiNoteData can only been initialized after view installed
+            installLayers();
+
+            Log.e(TAG, "initialized...");
+            return true;
+        }
+
+        /**
+         * Is {@link #installView(float, float)} called or not.
+         *
+         * @return
+         */
+        public boolean isViewInstalled() {
+            return mCoordinateConverter != null;
+        }
+
+        public void installLayers() {
+            if (isReadMode()) {
+                // Used for calculate note info(most is because ios used different strategy for note)
+                ICoordinateConverter noteCoordinateConverter = new SimpleCoordinateConverter(mGraffitiBean.getDrawDeviceWidth(), mGraffitiBean.getDrawDeviceHeight(), mCanvasWidth, mCanvasHeight);
+                for (GraffitiBean.GraffitiLayerBean bean : mGraffitiBean.getLayers()) {
+                    GraffitiData.GraffitiLayerData layerData = new GraffitiData.GraffitiLayerData(mCoordinateConverter, noteCoordinateConverter, bean);
+                    addLayer(layerData);
+                }
+            }
+        }
 
         /**
          * Default
@@ -607,9 +699,15 @@ public class GraffitiView extends ViewGroup {
          * @return
          */
         public boolean isReadMode() {
-            return mSource != null;
+            return mGraffitiBean != null && mGraffitiBean.getLayers() != null && mGraffitiBean.getLayers().size() > 0;
         }
 
+        /**
+         * @return
+         */
+        public static float getWidthHeightPercentage() {
+            return GraffitiBean.ReferenceCanvasWidth / GraffitiBean.ReferenceCanvasHeight;
+        }
 
         /**
          * Getting max note number.
@@ -699,6 +797,16 @@ public class GraffitiView extends ViewGroup {
             updateTotalNoteNumber();
         }
 
+        /**
+         * Is merge same layer
+         *
+         * @return
+         */
+        public boolean isMergeLayer() {
+            return true;
+        }
+
+
         public List<GraffitiLayerData> getLayers() {
             return mLayers;
         }
@@ -769,9 +877,23 @@ public class GraffitiView extends ViewGroup {
          * @return
          */
         public GraffitiData.GraffitiLayerData getDrawingLayer(GraffitiBean.GraffitiLayerBean layerBean) {
-            GraffitiData.GraffitiLayerData layerData = new GraffitiData.GraffitiLayerData(layerBean);
+            GraffitiLayerData lastLayer = getLastLayer();
+            if (lastLayer != null && isMergeLayer() && lastLayer.isMergeAble(layerBean)) {
+                return lastLayer;
+            }
+
+            //new one
+            GraffitiData.GraffitiLayerData layerData = new GraffitiData.GraffitiLayerData(mCoordinateConverter, null, layerBean);
             addLayer(layerData);
             return layerData;
+        }
+
+        public float getCanvasWidth() {
+            return mCanvasWidth;
+        }
+
+        public float getCanvasHeight() {
+            return mCanvasHeight;
         }
 
 
@@ -780,9 +902,6 @@ public class GraffitiView extends ViewGroup {
             static final String TAG = GraffitiData.GraffitiLayerData.class.getSimpleName();
 
             private GraffitiBean.GraffitiLayerBean mLayerBean;
-
-            private float mCanvasWidth; //画布宽度
-            private float mCanvasHeight; //画布高度
 
             private float mNoteWidth;
             private float mNoteHeight;
@@ -801,45 +920,38 @@ public class GraffitiView extends ViewGroup {
             AnimatorFactory.AbstractBaseAnimator mAnimator; // 是否有动画
             ICoordinateConverter mCoordinateConverter;
 
-            public GraffitiLayerData(GraffitiBean.GraffitiLayerBean layerBean) {
+            public GraffitiLayerData(ICoordinateConverter converter, ICoordinateConverter noteConverter, GraffitiBean.GraffitiLayerBean layerBean) {
+                if (converter == null) {
+                    throw new IllegalArgumentException("ICoordinateConverter must not be null!");
+                }
                 if (layerBean == null) {
                     throw new IllegalArgumentException("Must support a valid GraffitiBean.GraffitiLayerBean");
                 }
                 mLayerBean = layerBean;
+
+                installView(converter);
+
+                //install note if needed
+                if (isReadMode()) {
+                    installNotes(noteConverter);
+                }
+            }
+
+            private void installView(ICoordinateConverter converter) {
+                mCoordinateConverter = converter;
+                mNoteWidth = mCoordinateConverter.convertWidthReferenceToPixel(mLayerBean.getPercentageNoteWidth());
+                mNoteHeight = mCoordinateConverter.convertHeightReferenceToPixel(mLayerBean.getPercentageNoteHeight());
+                mNoteDistance = mCoordinateConverter.convertHeightReferenceToPixel(mLayerBean.getPercentageNoteDistance());
             }
 
             /**
-             * Must called when view size changed
+             * Is view installed or not.
              *
-             * @param viewWidth
-             * @param viewHeight
-             * @return any {@link GraffitiData.GraffitiLayerData.GraffitiNoteData} has been added from {@link GraffitiBean.GraffitiLayerBean}
+             * @return
              */
-            public boolean installView(float viewWidth, float viewHeight) {
-                if (viewWidth <= 0 || viewHeight <= 0) {
-                    throw new IllegalArgumentException("viewWidth or viewHeight must > 0, viewWidth -> " + viewWidth + " viewHeight -> " + viewHeight);
-                }
-
-                if (viewWidth == mCanvasWidth && viewHeight == mCanvasHeight) {
-                    //installData already
-                    return false;
-                }
-
-                mCoordinateConverter = new SimpleCoordinateConverter(mLayerBean.getPercentageCanvasWidth(), mLayerBean.getPercentageCanvasHeight(), viewWidth, viewHeight);
-
-                mCanvasWidth = viewWidth;
-                mCanvasHeight = viewHeight;
-
-                mNoteWidth = mCoordinateConverter.convertWidthPercentageToPixel(mLayerBean.getPercentageNoteWidth());
-                mNoteHeight = mCoordinateConverter.convertHeightPercentageToPixel(mLayerBean.getPercentageNoteHeight());
-                mNoteDistance = mCoordinateConverter.convertHeightPercentageToPixel(mLayerBean.getPercentageNoteDistance());
-
-                // GraffitiNoteData can only been initialized after view installed
-
-                Log.e(TAG, "initialized... \n" + this.toString());
-                return true;
+            public boolean isViewInstalled() {
+                return mCoordinateConverter != null;
             }
-
 
             /**
              * Cooperate with {@link GraffitiData#isReadMode()}.
@@ -850,16 +962,16 @@ public class GraffitiView extends ViewGroup {
                 return mLayerBean.getNotes() != null && mLayerBean.getNotes().size() > 0;
             }
 
-
             /**
              * Install notes
              */
-            public void installNotes() {
-                if (isReadMode()) {
-                    for (GraffitiBean.GraffitiLayerBean.GraffitiNoteBean noteBean : mLayerBean.getNotes()) {
-                        GraffitiData.GraffitiLayerData.GraffitiNoteData noteData = new GraffitiData.GraffitiLayerData.GraffitiNoteData(this, noteBean);
-                        addNote(noteData);
-                    }
+            private void installNotes(ICoordinateConverter noteConverter) {
+                if (noteConverter == null) {
+                    throw new IllegalArgumentException("How could noteConverter be null when read mode ?");
+                }
+                for (GraffitiBean.GraffitiLayerBean.GraffitiNoteBean noteBean : mLayerBean.getNotes()) {
+                    GraffitiData.GraffitiLayerData.GraffitiNoteData noteData = new GraffitiData.GraffitiLayerData.GraffitiNoteData(this, noteConverter.convertWidthReferenceToPixel(noteBean.getDeviceX()), noteConverter.convertHeightReferenceToPixel(noteBean.getDeviceY()));
+                    addNote(noteData);
                 }
             }
 
@@ -888,14 +1000,6 @@ public class GraffitiView extends ViewGroup {
                     return mNotes.get(mNotes.size() - 1);
                 }
                 return null;
-            }
-
-            public float getCanvasWidth() {
-                return mCanvasWidth;
-            }
-
-            public float getCanvasHeight() {
-                return mCanvasHeight;
             }
 
             public float getNoteWidth() {
@@ -934,8 +1038,8 @@ public class GraffitiView extends ViewGroup {
             }
 
             @Deprecated
-            public boolean isMergeAble(GraffitiData.GraffitiLayerData layerData) {
-                return !isHasAnimation() && mLayerBean.equals(layerData.getGraffitiLayerBean());
+            public boolean isMergeAble(GraffitiBean.GraffitiLayerBean bean) {
+                return !isHasAnimation() && mLayerBean.equals(bean) && mNotes.size() < 10;
             }
 
             public boolean isHasAnimation() {
@@ -1014,8 +1118,6 @@ public class GraffitiView extends ViewGroup {
             public String toString() {
                 return "[" +
                         "mLayerBean:" + mLayerBean +
-                        "mCanvasWidth:" + mCanvasWidth +
-                        ",mCanvasHeight:" + mCanvasHeight +
                         ",mNoteWidth:" + mNoteWidth +
                         ",mNoteHeight:" + mNoteHeight +
                         ",mNoteDistance:" + mNoteDistance +
@@ -1047,20 +1149,9 @@ public class GraffitiView extends ViewGroup {
                 private RectF mOriginalRectF;
                 private RectF mCalculateRectF;
 
-                /**
-                 * @param layerData
-                 * @param bean
-                 */
-                public GraffitiNoteData(GraffitiData.GraffitiLayerData layerData, GraffitiBean.GraffitiLayerBean.GraffitiNoteBean bean) {
-                    this(layerData, layerData.mCoordinateConverter.convertWidthPercentageToPixel(bean.getPercentageX()), layerData.mCoordinateConverter.convertHeightPercentageToPixel(bean.getPercentageY()));
-                }
-
                 public GraffitiNoteData(GraffitiData.GraffitiLayerData layerData, float centerX, float centerY) {
                     if (layerData == null) {
                         throw new IllegalArgumentException("layerData can not be null !");
-                    }
-                    if (layerData.getCoordinateConverter() == null) {
-                        throw new IllegalArgumentException("has GraffitiLayerData called #installView(viewWidth,viewHeight) yet? ICoordinateConverter has not been installed yet.");
                     }
                     mLayerData = layerData;
                     mOriginalRectF = new RectF(
@@ -1178,98 +1269,78 @@ public class GraffitiView extends ViewGroup {
 
     public interface ICoordinateConverter {
 
-        float convertWidthPixelToPercentage(float widthPixel);
+        float convertWidthPixelToReference(float widthPixel);
 
-        float convertWidthPercentageToPixel(float widthPercentage);
+        float convertWidthReferenceToPixel(float widthPercentage);
 
-        float convertHeightPixelToPercentage(float heightPixel);
+        float convertHeightPixelToReference(float heightPixel);
 
-        float convertHeightPercentageToPixel(float heightPercentage);
+        float convertHeightReferenceToPixel(float heightPercentage);
 
-        /**
-         * Convert Percentage to Pixel
-         *
-         * @param from
-         * @param to
-         * @return
-         */
-        RectF convertPercentageToPixel(RectF from, RectF to);
-
-
-        /**
-         * Convert Pixel to Percentage
-         *
-         * @param from
-         * @param to
-         * @return
-         */
-        RectF convertPixelToPercentage(RectF from, RectF to);
     }
 
 
     public static class SimpleCoordinateConverter implements ICoordinateConverter {
 
-        private RectF mTempRectF;
-
         final float mWidthFactor;
         final float mHeightFactor;
 
-        public SimpleCoordinateConverter(float percentageWidth, float percentageHeight, float viewWidth, float viewHeight) {
-            mWidthFactor = percentageWidth / viewWidth;
+        public SimpleCoordinateConverter(float referenceWidth, float referenceHeight, float viewWidth, float viewHeight) {
+            mWidthFactor = referenceWidth / viewWidth;
 //            mHeightFactor = percentageHeight / viewHeight;
             mHeightFactor = mWidthFactor;
         }
 
         @Override
-        public float convertWidthPixelToPercentage(float widthPixel) {
+        public float convertWidthPixelToReference(float widthPixel) {
             return widthPixel * mWidthFactor;
         }
 
         @Override
-        public float convertWidthPercentageToPixel(float widthPercentage) {
+        public float convertWidthReferenceToPixel(float widthPercentage) {
             return widthPercentage / mWidthFactor;
         }
 
         @Override
-        public float convertHeightPixelToPercentage(float heightPixel) {
+        public float convertHeightPixelToReference(float heightPixel) {
             return heightPixel * mHeightFactor;
         }
 
         @Override
-        public float convertHeightPercentageToPixel(float heightPercentage) {
+        public float convertHeightReferenceToPixel(float heightPercentage) {
             return heightPercentage / mHeightFactor;
         }
 
-        @Override
-        public RectF convertPercentageToPixel(RectF from, RectF to) {
-            if (to == null) {
-                to = getTempRectF();
+        public static float convertPixelToReference(float reference, float pixel, float value) {
+            if (pixel == 0 || reference == 0) {
+                return 0;
             }
-            to.left = convertWidthPercentageToPixel(from.left);
-            to.top = convertHeightPercentageToPixel(from.top);
-            to.right = convertWidthPercentageToPixel(from.right);
-            to.bottom = convertHeightPercentageToPixel(from.bottom);
-            return to;
+            float factor = reference / pixel;
+            return value * factor;
         }
 
-        @Override
-        public RectF convertPixelToPercentage(RectF from, RectF to) {
-            if (to == null) {
-                to = getTempRectF();
+        public static float convertReferenceToPixel(float reference, float pixel, float value) {
+            if (pixel == 0 || reference == 0) {
+                return 0;
             }
-            to.left = convertWidthPixelToPercentage(from.left);
-            to.top = convertHeightPercentageToPixel(from.top);
-            to.right = convertWidthPixelToPercentage(from.right);
-            to.bottom = convertHeightPixelToPercentage(from.bottom);
-            return to;
+            float factor = reference / pixel;
+            return value / factor;
         }
 
-        protected RectF getTempRectF() {
-            if (mTempRectF == null) {
-                mTempRectF = new RectF();
+        public static float convertPixelToReference(float factor, float value) {
+            if (factor == 0) {
+                return 0;
             }
-            return mTempRectF;
+            return value * factor;
         }
+
+        public static float convertReferenceToPixel(float factor, float value) {
+            if (factor == 0) {
+                return 0;
+            }
+            return value / factor;
+        }
+
     }
 
 
@@ -1755,7 +1826,7 @@ public class GraffitiView extends ViewGroup {
 
             @Override
             public Bitmap loadBitmap(final String url, final IBitmapListener listener) {
-                Log.v(TAG, "loadBitmap url -> " + url + " listener -> " + listener);
+                Log.v(TAG, "loadBitmap url -> " + url);
                 if (TextUtils.isEmpty(url)) {
                     return null;
                 }
@@ -1792,7 +1863,7 @@ public class GraffitiView extends ViewGroup {
 
             @Override
             public void loadBitmaps(final List<String> urls, final IBitmapListener listener, boolean forceReload) {
-                Log.e(TAG, "loadBitmaps urls -> " + urls + " listener -> " + listener + " forceReload -> " + forceReload);
+                Log.e(TAG, "loadBitmaps urls -> " + urls + " forceReload -> " + forceReload);
                 if (urls == null) {
                     Log.e(TAG, "\t urls is null!");
                     listener.onComplete(new IllegalArgumentException("urls is null"));

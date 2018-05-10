@@ -7,6 +7,8 @@ import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.ScaleAnimation;
 import android.widget.Toast;
 
 import com.nostra13.universalimageloader.core.ImageLoader;
@@ -21,7 +23,7 @@ import org.json.JSONObject;
 
 public class GraffitiViewActivity extends Activity implements View.OnClickListener {
 
-    static final String TAG = GraffitiViewActivity.class.getSimpleName();
+    static final String TAG = "ViewActivity";
 
     private GraffitiView mGraffitiView;
 
@@ -65,21 +67,38 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        ImageLoader.getInstance().init(ImageLoaderConfiguration.createDefault(getApplicationContext()));
-
-        setContentView(R.layout.graffiti_act);
-        mGraffitiView = (GraffitiView) findViewById(R.id.graffiti_view);
-        mGraffitiView.setEnabled(false);
 
         GraffitiView.GraffitiData graffitiData = null;
         if (getIntent().getSerializableExtra(KEY_GRAFFITI_BEAN) instanceof GraffitiBean) {
             GraffitiBean graffitiBean = (GraffitiBean) getIntent().getSerializableExtra(KEY_GRAFFITI_BEAN);
             graffitiData = new GraffitiView.GraffitiData(graffitiBean);
+
         }
-        final GraffitiView.GraffitiData finalGraffitiData = graffitiData;
+
+
+        ImageLoader.getInstance().init(ImageLoaderConfiguration.createDefault(getApplicationContext()));
+        setContentView(R.layout.graffiti_act);
 
         // init resource manager
         GraffitiView.GraffitiResourcesManager.init(mDownloader);
+
+        mGraffitiView = (GraffitiView) findViewById(R.id.graffiti_view);
+        mGraffitiView.setEnabled(false);
+
+        //select a bean
+        mGraffitiView.setDrawObject(GraffitiBean.GraffitiLayerBean.buildTest());
+        mGraffitiView.setOnDataChangedCallback(new GraffitiView.ICallback() {
+            @Override
+            public void onDataChanged(GraffitiView graffitiView, GraffitiBean.GraffitiLayerBean drawingObject) {
+                Log.e(TAG, "onDataChanged -> " + graffitiView.getGraffitiData().getCurrentTotalNote());
+            }
+
+            @Override
+            public void onMessage(int msg) {
+
+            }
+        });
+
         // load all resources
         GraffitiView.GraffitiResourcesManager.loadResources(GraffitiBean.GraffitiLayerBean.mTestUrls, new GraffitiView.GraffitiResourcesManager.IBitmapManager.IBitmapListener() {
             @Override
@@ -96,26 +115,18 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
             public void onComplete(Throwable e) {
                 Log.e(TAG, "onComplete e -> " + e);
                 Toast.makeText(GraffitiViewActivity.this, "Ready to show", Toast.LENGTH_SHORT).show();
-
-                mGraffitiView.setEnabled(true);
-                mGraffitiView.installData(finalGraffitiData);
-
-                //select a bean
-                mGraffitiView.setDrawObject(GraffitiBean.GraffitiLayerBean.buildTest());
-                mGraffitiView.setOnDataChangedCallback(new GraffitiView.ICallback() {
-                    @Override
-                    public void onDataChanged(GraffitiView graffitiView, GraffitiBean.GraffitiLayerBean drawingObject) {
-                        Log.e(TAG, "onDataChanged -> " + graffitiView.getGraffitiData().getCurrentTotalNote());
-                    }
-
-                    @Override
-                    public void onMessage(int msg) {
-
-                    }
-                });
             }
         }, false);
 
+        mGraffitiView.setEnabled(true);
+        mGraffitiView.installData(graffitiData);
+
+
+        ScaleAnimation scaleAnimation = new ScaleAnimation(1.0f, 0.5f, 1.0f, 0.5f, ScaleAnimation.RELATIVE_TO_SELF, 0.5f, ScaleAnimation.RELATIVE_TO_SELF, 0.5f);
+        scaleAnimation.setRepeatCount(1);
+        scaleAnimation.setRepeatMode(Animation.REVERSE);
+        scaleAnimation.setDuration(1000);
+        mGraffitiView.startAnimation(scaleAnimation);
 
     }
 
@@ -124,25 +135,28 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
     public void onClick(View v) {
         GraffitiBean bean = new GraffitiBean(mGraffitiView.getGraffitiData());
 
-        switch (v.getId()) {
-            case R.id.to_bean:
-                try {
-                    JSONObject jsonObject = new JSONObject(bean.toJson());
+        try {
+            JSONObject jsonObject = new JSONObject(bean.toJson());
+            switch (v.getId()) {
+                case R.id.to_bean:
                     MonitorActivity.show(this, jsonObject.toString(2));
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-                break;
+                    break;
 
-            case R.id.from_bean:
-                GraffitiViewActivity.jumpToThis(this, bean);
-                break;
+                case R.id.from_bean:
+                    GraffitiViewActivity.jumpToThis(this, GraffitiBean.fromJson(jsonObject.toString()));
+                    break;
 
-            case R.id.undo_last:
-                mGraffitiView.getGraffitiData().clearLayers();
-                mGraffitiView.notifyDataChanged();
-                break;
+                case R.id.undo_last:
+                    mGraffitiView.getGraffitiData().clearLayers();
+                    mGraffitiView.notifyDataChanged();
+                    break;
+            }
+
+        } catch (JSONException e) {
+            e.printStackTrace();
         }
+
+
     }
 
 
