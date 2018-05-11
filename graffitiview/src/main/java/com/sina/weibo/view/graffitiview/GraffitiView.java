@@ -26,9 +26,9 @@ import java.util.List;
  * 2,WRITE-MODE<br>
  * <p>
  * Three location descriptions:<br>
- * 1, REFERENCE 参考坐标，此数值由UI提供,如 {@link com.sina.weibo.view.graffitiview.GraffitiBean.GraffitiLayerBean}<br>
- * 2, DEVICE 礼物绘制机制的坐标，比如 IOS提供的数据，如 {@link com.sina.weibo.view.graffitiview.GraffitiBean.GraffitiLayerBean.GraffitiNoteBean} 中<br>
- * 3, PIXEL 本地坐标，所有本机器的的坐标为含有 PIXEL 字段，如 {@link com.sina.weibo.view.graffitiview.GraffitiBean.GraffitiLayerBean}<br>
+ * 1, REFERENCE 参考坐标，此数值由UI提供,如 {@link GraffitiBean.GraffitiLayerBean}<br>
+ * 2, DEVICE 礼物绘制机制的坐标，比如 IOS提供的数据，如 {@link GraffitiBean.GraffitiLayerBean.GraffitiNoteBean} 中<br>
+ * 3, PIXEL 本地坐标，所有本机器的的坐标为含有 PIXEL 字段，如 {@link GraffitiBean.GraffitiLayerBean}<br>
  */
 public class GraffitiView extends ViewGroup {
     static final String TAG = GraffitiView.class.getSimpleName();
@@ -308,7 +308,7 @@ public class GraffitiView extends ViewGroup {
             return false;
         }
 
-        if (!mGraffitiData.isEnableRiskLoadBitmap() && !mGraffitiData.isBitmapsLoaded()) {
+        if (!mGraffitiData.isBitmapsLoaded()) {
             Log.e(TAG, "resources is not ready, nothing to draw.");
             mInternalCallback.onMessage(ICallback.MSG_RESOURCE_NOT_READY);
             return false;
@@ -613,13 +613,6 @@ public class GraffitiView extends ViewGroup {
         private int mTotalNoteNumber = 0;
 
         /**
-         * Whether we risk loading bitmap when {@link #isBitmapsLoaded()} is negative.
-         * <p>
-         * When enable this, we get faster drawing, but unexcepted touch/read delay may occur sometimes.
-         */
-        private boolean mEnableRiskLoadBitmap = true;
-
-        /**
          * Used for calculating reference/ui-design values
          */
         private ICoordinateConverter mReferenceCoordinateConverter;
@@ -696,7 +689,7 @@ public class GraffitiView extends ViewGroup {
             if (isReadMode()) {
                 // Used for calculate note info(most is because ios used different strategy for note)
                 for (GraffitiBean.GraffitiLayerBean bean : mGraffitiBean.getLayers()) {
-                    GraffitiData.GraffitiLayerData layerData = new GraffitiData.GraffitiLayerData(bean);
+                    GraffitiLayerData layerData = new GraffitiLayerData(bean);
                     addLayer(layerData);
                 }
             }
@@ -742,15 +735,6 @@ public class GraffitiView extends ViewGroup {
         }
 
         /**
-         * See {@link #mEnableRiskLoadBitmap} for detail
-         *
-         * @return
-         */
-        public boolean isEnableRiskLoadBitmap() {
-            return mEnableRiskLoadBitmap;
-        }
-
-        /**
          * Is all urls loaded finished or not.
          *
          * @return
@@ -787,20 +771,11 @@ public class GraffitiView extends ViewGroup {
 
 
         /**
-         * See {@link #mEnableRiskLoadBitmap} for detail
-         *
-         * @return
-         */
-        public void setEnableRiskLoadResources(boolean value) {
-            mEnableRiskLoadBitmap = value;
-        }
-
-        /**
          * Adding layer
          *
          * @param data
          */
-        private void addLayer(GraffitiData.GraffitiLayerData data) {
+        private void addLayer(GraffitiLayerData data) {
             if (data == null) {
                 return;
             }
@@ -816,7 +791,7 @@ public class GraffitiView extends ViewGroup {
          *
          * @param data
          */
-        public void removeLayer(GraffitiData.GraffitiLayerData data) {
+        public void removeLayer(GraffitiLayerData data) {
             if (data != null) {
                 mLayers.remove(data);
             }
@@ -919,14 +894,14 @@ public class GraffitiView extends ViewGroup {
          * @param layerBean
          * @return
          */
-        public GraffitiData.GraffitiLayerData getDrawingLayer(GraffitiBean.GraffitiLayerBean layerBean) {
+        public GraffitiLayerData getDrawingLayer(GraffitiBean.GraffitiLayerBean layerBean) {
             GraffitiLayerData lastLayer = getLastLayer();
             if (lastLayer != null && isMergeLayer() && lastLayer.isMergeAble(layerBean)) {
                 return lastLayer;
             }
 
             //new one
-            GraffitiData.GraffitiLayerData layerData = new GraffitiData.GraffitiLayerData(layerBean);
+            GraffitiLayerData layerData = new GraffitiLayerData(layerBean);
             addLayer(layerData);
             return layerData;
         }
@@ -942,7 +917,7 @@ public class GraffitiView extends ViewGroup {
 
         public class GraffitiLayerData {
 
-            final String TAG = GraffitiData.GraffitiLayerData.class.getSimpleName();
+            final String TAG = GraffitiLayerData.class.getSimpleName();
 
             private GraffitiBean.GraffitiLayerBean mLayerBean;
 
@@ -1013,7 +988,7 @@ public class GraffitiView extends ViewGroup {
                 }
                 ICoordinateConverter noteConverter = mDeviceCoordinateConverter;
                 for (GraffitiBean.GraffitiLayerBean.GraffitiNoteBean noteBean : mLayerBean.getNotes()) {
-                    GraffitiData.GraffitiLayerData.GraffitiNoteData noteData = new GraffitiNoteData(noteConverter.convertWidthTargetToPixel(noteBean.getDeviceX()), noteConverter.convertHeightTargetToPixel(noteBean.getDeviceY()));
+                    GraffitiNoteData noteData = new GraffitiNoteData(noteConverter.convertWidthTargetToPixel(noteBean.getDeviceX()), noteConverter.convertHeightTargetToPixel(noteBean.getDeviceY()));
                     addNote(noteData);
                 }
             }
@@ -1038,7 +1013,7 @@ public class GraffitiView extends ViewGroup {
              *
              * @return
              */
-            public GraffitiData.GraffitiLayerData.GraffitiNoteData getLast() {
+            public GraffitiNoteData getLast() {
                 if (mNotes.size() > 0) {
                     return mNotes.get(mNotes.size() - 1);
                 }
@@ -1088,7 +1063,7 @@ public class GraffitiView extends ViewGroup {
                 return mLayerBean.getAnimation() > 0;
             }
 
-            public void addNote(GraffitiData.GraffitiLayerData.GraffitiNoteData note) {
+            public void addNote(GraffitiNoteData note) {
                 if (note == null || mNotes.contains(note)) {
                     return;
                 }
@@ -1208,8 +1183,8 @@ public class GraffitiView extends ViewGroup {
                     return mAnimator == null ? getOriginalRectF() : mAnimator.getAnimateRectF(getOriginalRectF(), mCalculateRectF);
                 }
 
-                public GraffitiData.GraffitiLayerData getLayerData() {
-                    return GraffitiData.GraffitiLayerData.this;
+                public GraffitiLayerData getLayerData() {
+                    return GraffitiLayerData.this;
                 }
 
                 public ICoordinateConverter getCoordinateConverter() {
@@ -1397,8 +1372,8 @@ public class GraffitiView extends ViewGroup {
         //weibo use
         public final static int SHAKE_RETATE = 5;
 
-        public static AnimatorFactory.AbstractBaseAnimator create(GraffitiData.GraffitiLayerData data, Runnable updateViewRunnable) {
-            return new AnimatorFactory.ScaleAnimator(data, updateViewRunnable, 1000, 1.0f, 0.5f);
+        public static AbstractBaseAnimator create(GraffitiData.GraffitiLayerData data, Runnable updateViewRunnable) {
+            return new ScaleAnimator(data, updateViewRunnable, 1000, 1.0f, 0.5f);
         }
 
 
@@ -1461,7 +1436,7 @@ public class GraffitiView extends ViewGroup {
 
             static final boolean ENABLE_ALIGN_CLOCK = false;
 
-            static AnimatorFactory.AbstractBaseAnimator.InternalAlignClock mClock = ENABLE_ALIGN_CLOCK ? new AnimatorFactory.AbstractBaseAnimator.InternalAlignClock() : null;
+            static InternalAlignClock mClock = ENABLE_ALIGN_CLOCK ? new InternalAlignClock() : null;
 
             private ObjectAnimator mAnimator;
 
@@ -1477,7 +1452,7 @@ public class GraffitiView extends ViewGroup {
                 mLayerData = layerData;
                 mUpdateViewRunnable = updateViewRunnable;
 
-                mAnimator = ObjectAnimator.ofFloat(AnimatorFactory.AbstractBaseAnimator.this, "value", from, to);
+                mAnimator = ObjectAnimator.ofFloat(AbstractBaseAnimator.this, "value", from, to);
                 mAnimator.setDuration(duration);
                 mAnimator.addListener(this);
                 mAnimator.addUpdateListener(this);
@@ -1587,7 +1562,7 @@ public class GraffitiView extends ViewGroup {
         }
 
 
-        public static class ScaleAnimator extends AnimatorFactory.AbstractBaseAnimator {
+        public static class ScaleAnimator extends AbstractBaseAnimator {
 
             public ScaleAnimator(GraffitiData.GraffitiLayerData layerData, Runnable updateViewRunnable, long duration, float from, float to) {
                 super(layerData, updateViewRunnable, duration, from, to);
