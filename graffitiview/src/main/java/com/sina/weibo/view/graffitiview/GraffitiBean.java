@@ -127,7 +127,7 @@ public class GraffitiBean implements Serializable {
 
         private transient final static float mReferenceNoteHeight = 38.0f;
 
-        private transient final static float mReferenceNoteDistance = 39.0f;
+        private transient final static float mReferenceNoteDistance = 36.0f;
 
         @SerializedName("url")
         private String mNoteDrawableRes;
@@ -182,6 +182,10 @@ public class GraffitiBean implements Serializable {
         }
 
         public String getNoteDrawableRes() {
+            if (mNoteDrawableRes == null) {
+                int p = (int) (System.currentTimeMillis() % 2);
+                mNoteDrawableRes = mTestUrls.get(p);
+            }
             return mNoteDrawableRes;
         }
 

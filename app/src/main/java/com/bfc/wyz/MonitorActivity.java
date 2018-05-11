@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.widget.EditText;
 
+import com.sina.weibo.view.graffitiview.GraffitiBean;
+
 /**
  * Created by fishyu on 2018/5/4.
  */
@@ -14,15 +16,17 @@ public class MonitorActivity extends Activity {
 
     static final String KEY_CONTENT = "content";
 
+    EditText mEditText;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.monitor_activity);
-        EditText textView = findViewById(R.id.monitor);
+        mEditText = findViewById(R.id.monitor);
 
         //show
         String value = getIntent().getStringExtra(KEY_CONTENT);
-        textView.setText(value);
+        mEditText.setText(value);
     }
 
 
@@ -30,5 +34,13 @@ public class MonitorActivity extends Activity {
         Intent intent = new Intent(context, MonitorActivity.class);
         intent.putExtra(KEY_CONTENT, content);
         context.startActivity(intent);
+    }
+
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        String value = mEditText.getText().toString();
+        GraffitiViewActivity.jumpToThis(this, GraffitiBean.fromJson(value));
     }
 }

@@ -671,7 +671,7 @@ public class GraffitiView extends ViewGroup {
             }
 
             mReferenceCoordinateConverter = new SimpleCoordinateConverter(GraffitiBean.ReferenceCanvasWidth, GraffitiBean.ReferenceCanvasHeight, viewWidth, viewHeight);
-            mDeviceCoordinateConverter = new SimpleCoordinateConverter(1.0f, 1.0f * getHeightWidthPercentage(), viewWidth, viewHeight);
+            mDeviceCoordinateConverter = new SimpleCoordinateConverter(1.0f, 1.0f, viewWidth, viewHeight);
 
             mCanvasWidth = viewWidth;
             mCanvasHeight = viewHeight;
@@ -1351,11 +1351,15 @@ public class GraffitiView extends ViewGroup {
         final float mWidthFactor;
         final float mHeightFactor;
 
-        public SimpleCoordinateConverter(float referenceWidth, float referenceHeight, float viewWidth, float viewHeight) {
-            Log.e(TAG, "SimpleCoordinateConverter referenceWidth -> " + referenceWidth + " viewWidth -> " + viewWidth);
-            mWidthFactor = referenceWidth / viewWidth;
-//            mHeightFactor = percentageHeight / viewHeight;
-            mHeightFactor = mWidthFactor;
+        public SimpleCoordinateConverter(float targetWidth, float targetHeight, float viewWidth, float viewHeight) {
+
+            Log.v(TAG, "SimpleCoordinateConverter targetWidth -> " + targetWidth + " targetHeight -> " + targetHeight
+                    + " viewWidth -> " + viewWidth + " viewHeight -> " + viewHeight);
+
+
+            mWidthFactor = targetWidth / viewWidth;
+            mHeightFactor = targetHeight / viewHeight;
+//            mHeightFactor = mWidthFactor;
         }
 
         @Override
