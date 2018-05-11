@@ -162,7 +162,7 @@ public class GraffitiView extends ViewGroup {
         Log.e(TAG, "onMeasure mGraffitiData -> " + mGraffitiData);
         // square this view
         final int width = MeasureSpec.getSize(widthMeasureSpec);
-        heightMeasureSpec = MeasureSpec.makeMeasureSpec((int) (width / GraffitiData.getWidthHeightPercentage()), MeasureSpec.EXACTLY);
+        heightMeasureSpec = MeasureSpec.makeMeasureSpec((int) (width * GraffitiData.getHeightWidthPercentage()), MeasureSpec.EXACTLY);
 
         final int height = MeasureSpec.getSize(heightMeasureSpec);
 
@@ -620,9 +620,14 @@ public class GraffitiView extends ViewGroup {
         private boolean mEnableRiskLoadBitmap = true;
 
         /**
-         * Used for calculate layer info
+         * Used for calculating reference/ui-design values
          */
-        private ICoordinateConverter mCoordinateConverter;
+        private ICoordinateConverter mReferenceCoordinateConverter;
+
+        /**
+         * Used for calculating device/bean infos.
+         */
+        private ICoordinateConverter mDeviceCoordinateConverter;
 
         private float mCanvasWidth;
 
@@ -665,7 +670,8 @@ public class GraffitiView extends ViewGroup {
                 return false;
             }
 
-            mCoordinateConverter = new SimpleCoordinateConverter(GraffitiBean.ReferenceCanvasWidth, GraffitiBean.ReferenceCanvasHeight, viewWidth, viewHeight);
+            mReferenceCoordinateConverter = new SimpleCoordinateConverter(GraffitiBean.ReferenceCanvasWidth, GraffitiBean.ReferenceCanvasHeight, viewWidth, viewHeight);
+            mDeviceCoordinateConverter = new SimpleCoordinateConverter(1.0f, 1.0f * getHeightWidthPercentage(), viewWidth, viewHeight);
 
             mCanvasWidth = viewWidth;
             mCanvasHeight = viewHeight;
@@ -683,15 +689,14 @@ public class GraffitiView extends ViewGroup {
          * @return
          */
         public boolean isViewInstalled() {
-            return mCoordinateConverter != null;
+            return mReferenceCoordinateConverter != null;
         }
 
         public void installLayers() {
             if (isReadMode()) {
                 // Used for calculate note info(most is because ios used different strategy for note)
-                ICoordinateConverter noteCoordinateConverter = new SimpleCoordinateConverter(mGraffitiBean.getDrawDeviceWidth(), mGraffitiBean.getDrawDeviceHeight(), mCanvasWidth, mCanvasHeight);
                 for (GraffitiBean.GraffitiLayerBean bean : mGraffitiBean.getLayers()) {
-                    GraffitiData.GraffitiLayerData layerData = new GraffitiData.GraffitiLayerData(noteCoordinateConverter, bean);
+                    GraffitiData.GraffitiLayerData layerData = new GraffitiData.GraffitiLayerData(bean);
                     addLayer(layerData);
                 }
             }
@@ -711,8 +716,8 @@ public class GraffitiView extends ViewGroup {
         /**
          * @return
          */
-        public static float getWidthHeightPercentage() {
-            return GraffitiBean.ReferenceCanvasWidth / GraffitiBean.ReferenceCanvasHeight;
+        public static float getHeightWidthPercentage() {
+            return GraffitiBean.ReferenceCanvasHeight / GraffitiBean.ReferenceCanvasWidth;
         }
 
         /**
@@ -921,7 +926,7 @@ public class GraffitiView extends ViewGroup {
             }
 
             //new one
-            GraffitiData.GraffitiLayerData layerData = new GraffitiData.GraffitiLayerData(null, layerBean);
+            GraffitiData.GraffitiLayerData layerData = new GraffitiData.GraffitiLayerData(layerBean);
             addLayer(layerData);
             return layerData;
         }
@@ -957,8 +962,8 @@ public class GraffitiView extends ViewGroup {
 
             AnimatorFactory.AbstractBaseAnimator mAnimator; // 是否有动画
 
-            public GraffitiLayerData(ICoordinateConverter noteConverter, GraffitiBean.GraffitiLayerBean layerBean) {
-                if (mCoordinateConverter == null) {
+            public GraffitiLayerData(GraffitiBean.GraffitiLayerBean layerBean) {
+                if (mReferenceCoordinateConverter == null) {
                     throw new IllegalArgumentException("ICoordinateConverter must not be null!");
                 }
 
@@ -971,14 +976,14 @@ public class GraffitiView extends ViewGroup {
 
                 //install note if needed
                 if (isReadMode()) {
-                    installNotes(noteConverter);
+                    installNotes();
                 }
             }
 
             private void installView() {
-                mNoteWidth = GraffitiData.this.mCoordinateConverter.convertWidthReferenceToPixel(mLayerBean.getPercentageNoteWidth());
-                mNoteHeight = GraffitiData.this.mCoordinateConverter.convertHeightReferenceToPixel(mLayerBean.getPercentageNoteHeight());
-                mNoteDistance = GraffitiData.this.mCoordinateConverter.convertHeightReferenceToPixel(mLayerBean.getPercentageNoteDistance());
+                mNoteWidth = GraffitiData.this.mReferenceCoordinateConverter.convertWidthTargetToPixel(mLayerBean.getPercentageNoteWidth());
+                mNoteHeight = GraffitiData.this.mReferenceCoordinateConverter.convertHeightTargetToPixel(mLayerBean.getPercentageNoteHeight());
+                mNoteDistance = GraffitiData.this.mReferenceCoordinateConverter.convertHeightTargetToPixel(mLayerBean.getPercentageNoteDistance());
             }
 
             /**
@@ -987,7 +992,7 @@ public class GraffitiView extends ViewGroup {
              * @return
              */
             public boolean isViewInstalled() {
-                return GraffitiData.this.mCoordinateConverter != null;
+                return GraffitiData.this.mReferenceCoordinateConverter != null;
             }
 
             /**
@@ -1002,12 +1007,13 @@ public class GraffitiView extends ViewGroup {
             /**
              * Install notes
              */
-            private void installNotes(ICoordinateConverter noteConverter) {
-                if (noteConverter == null) {
-                    throw new IllegalArgumentException("How could noteConverter be null when read mode ?");
+            private void installNotes() {
+                if (mDeviceCoordinateConverter == null) {
+                    throw new IllegalStateException("How could mDeviceCoordinateConverter be null? Can not get pixel values from beans");
                 }
+                ICoordinateConverter noteConverter = mDeviceCoordinateConverter;
                 for (GraffitiBean.GraffitiLayerBean.GraffitiNoteBean noteBean : mLayerBean.getNotes()) {
-                    GraffitiData.GraffitiLayerData.GraffitiNoteData noteData = new GraffitiNoteData(noteConverter.convertWidthReferenceToPixel(noteBean.getDeviceX()), noteConverter.convertHeightReferenceToPixel(noteBean.getDeviceY()));
+                    GraffitiData.GraffitiLayerData.GraffitiNoteData noteData = new GraffitiNoteData(noteConverter.convertWidthTargetToPixel(noteBean.getDeviceX()), noteConverter.convertHeightTargetToPixel(noteBean.getDeviceY()));
                     addNote(noteData);
                 }
             }
@@ -1158,7 +1164,7 @@ public class GraffitiView extends ViewGroup {
                         ",mNoteHeight:" + mNoteHeight +
                         ",mNoteDistance:" + mNoteDistance +
                         ",mNotes:" + mNotes +
-                        ",mCoordinateConverter:" + mCoordinateConverter +
+                        ",mReferenceCoordinateConverter:" + mReferenceCoordinateConverter +
                         ",mAnimator:" + mAnimator +
                         "]";
             }
@@ -1169,7 +1175,7 @@ public class GraffitiView extends ViewGroup {
              * @return
              */
             public ICoordinateConverter getCoordinateConverter() {
-                return mCoordinateConverter;
+                return mReferenceCoordinateConverter;
             }
 
 
@@ -1204,6 +1210,10 @@ public class GraffitiView extends ViewGroup {
 
                 public GraffitiData.GraffitiLayerData getLayerData() {
                     return GraffitiData.GraffitiLayerData.this;
+                }
+
+                public ICoordinateConverter getCoordinateConverter() {
+                    return mDeviceCoordinateConverter;
                 }
 
                 @Override
@@ -1290,22 +1300,48 @@ public class GraffitiView extends ViewGroup {
     /**
      * Created by fishyu on 2018/4/28.
      * <p>
-     * 坐标系统
+     * Coordinate converters.
      * <p>
-     * 概念：
-     * 1，Percentage 比例坐标 用于传输的抽象坐标，用比例值来描述
-     * 2，Pixel 像素坐标 用于计算机显示的坐标，用实际像素来描述
+     * See {@link GraffitiView} 's doc for more detail.
+     * <p>
+     * 1,convert current-device's pixel value to/from target(REFERENCE/DEVICE/BEAN) value
      */
 
     public interface ICoordinateConverter {
 
-        float convertWidthPixelToReference(float widthPixel);
+        /**
+         * convert current-device's width pixel value to target(REFERENCE/DEVICE/BEAN) value
+         *
+         * @param widthPixel
+         * @return
+         */
+        float convertWidthPixelToTarget(float widthPixel);
 
-        float convertWidthReferenceToPixel(float widthPercentage);
 
-        float convertHeightPixelToReference(float heightPixel);
+        /**
+         * convert current-device's width pixel value from target(REFERENCE/DEVICE/BEAN) value
+         *
+         * @param widthTarget
+         * @return
+         */
+        float convertWidthTargetToPixel(float widthTarget);
 
-        float convertHeightReferenceToPixel(float heightPercentage);
+        /**
+         * convert current-device's height pixel value to target(REFERENCE/DEVICE/BEAN) value
+         *
+         * @param heightPixel
+         * @return
+         */
+        float convertHeightPixelToTarget(float heightPixel);
+
+
+        /**
+         * convert current-device's height pixel value from target(REFERENCE/DEVICE/BEAN) value
+         *
+         * @param heightTarget
+         * @return
+         */
+        float convertHeightTargetToPixel(float heightTarget);
 
     }
 
@@ -1316,59 +1352,30 @@ public class GraffitiView extends ViewGroup {
         final float mHeightFactor;
 
         public SimpleCoordinateConverter(float referenceWidth, float referenceHeight, float viewWidth, float viewHeight) {
+            Log.e(TAG, "SimpleCoordinateConverter referenceWidth -> " + referenceWidth + " viewWidth -> " + viewWidth);
             mWidthFactor = referenceWidth / viewWidth;
 //            mHeightFactor = percentageHeight / viewHeight;
             mHeightFactor = mWidthFactor;
         }
 
         @Override
-        public float convertWidthPixelToReference(float widthPixel) {
+        public float convertWidthPixelToTarget(float widthPixel) {
             return widthPixel * mWidthFactor;
         }
 
         @Override
-        public float convertWidthReferenceToPixel(float widthPercentage) {
-            return widthPercentage / mWidthFactor;
+        public float convertWidthTargetToPixel(float widthTarget) {
+            return widthTarget / mWidthFactor;
         }
 
         @Override
-        public float convertHeightPixelToReference(float heightPixel) {
+        public float convertHeightPixelToTarget(float heightPixel) {
             return heightPixel * mHeightFactor;
         }
 
         @Override
-        public float convertHeightReferenceToPixel(float heightPercentage) {
-            return heightPercentage / mHeightFactor;
-        }
-
-        public static float convertPixelToReference(float reference, float pixel, float value) {
-            if (pixel == 0 || reference == 0) {
-                return 0;
-            }
-            float factor = reference / pixel;
-            return value * factor;
-        }
-
-        public static float convertReferenceToPixel(float reference, float pixel, float value) {
-            if (pixel == 0 || reference == 0) {
-                return 0;
-            }
-            float factor = reference / pixel;
-            return value / factor;
-        }
-
-        public static float convertPixelToReference(float factor, float value) {
-            if (factor == 0) {
-                return 0;
-            }
-            return value * factor;
-        }
-
-        public static float convertReferenceToPixel(float factor, float value) {
-            if (factor == 0) {
-                return 0;
-            }
-            return value / factor;
+        public float convertHeightTargetToPixel(float heightTarget) {
+            return heightTarget / mHeightFactor;
         }
 
     }
@@ -1383,6 +1390,8 @@ public class GraffitiView extends ViewGroup {
         public final static int TRANSLATE = 2;
         public final static int ALPHA = 3;
         public final static int ROTATE = 4;
+        //weibo use
+        public final static int SHAKE_RETATE = 5;
 
         public static AnimatorFactory.AbstractBaseAnimator create(GraffitiData.GraffitiLayerData data, Runnable updateViewRunnable) {
             return new AnimatorFactory.ScaleAnimator(data, updateViewRunnable, 1000, 1.0f, 0.5f);

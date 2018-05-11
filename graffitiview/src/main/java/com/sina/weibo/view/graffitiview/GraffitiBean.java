@@ -17,7 +17,7 @@ public class GraffitiBean implements Serializable {
 
     static Gson GSON = new Gson();
 
-    @SerializedName("layer")
+    @SerializedName("note")
     private List<GraffitiLayerBean> mLayers;
 
     /**
@@ -134,11 +134,13 @@ public class GraffitiBean implements Serializable {
 
         private transient final static int mAnimation = 1;
 
-        @SerializedName("note")
+        @SerializedName("points")
         private List<GraffitiNoteBean> mNotes;
 
-        @SerializedName("gold_coin")
-        private int mGoldCoin; //用户购买小咖币数量
+        /**
+         * Gift Bean
+         */
+        private transient int mGoldCoin; //用户购买小咖币数量
 
         public GraffitiLayerBean() {
 
@@ -224,7 +226,6 @@ public class GraffitiBean implements Serializable {
         @Override
         public String toString() {
             return "[" +
-
                     "id:" + id +
                     ",mReferenceNoteWidth:" + mReferenceNoteWidth +
                     ",mReferenceNoteHeight:" + mReferenceNoteHeight +
@@ -269,6 +270,10 @@ public class GraffitiBean implements Serializable {
                 this();
                 mDeviceX = noteData.getOriginalRectF().centerX();
                 mDeviceY = noteData.getOriginalRectF().centerY();
+
+                // convert values
+                mDeviceX = noteData.getCoordinateConverter().convertWidthPixelToTarget(mDeviceX);
+                mDeviceY = noteData.getCoordinateConverter().convertHeightPixelToTarget(mDeviceY);
             }
 
 
