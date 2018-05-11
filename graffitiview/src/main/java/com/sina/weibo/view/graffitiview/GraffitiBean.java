@@ -132,7 +132,7 @@ public class GraffitiBean implements Serializable {
         @SerializedName("url")
         private String mNoteDrawableRes;
 
-        private transient final static int mAnimation = -1;
+        private transient final static int mAnimation = 1;
 
         @SerializedName("note")
         private List<GraffitiNoteBean> mNotes;

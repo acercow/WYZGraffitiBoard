@@ -98,15 +98,6 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
         ImageLoader.getInstance().init(ImageLoaderConfiguration.createDefault(getApplicationContext()));
 
         SimpleGraffitiBitmapProvider.getInstance(mDownloader);
-
-        GraffitiView.GraffitiData graffitiData = null;
-        if (getIntent().getSerializableExtra(KEY_GRAFFITI_BEAN) instanceof GraffitiBean) {
-            GraffitiBean graffitiBean = (GraffitiBean) getIntent().getSerializableExtra(KEY_GRAFFITI_BEAN);
-            graffitiData = new GraffitiView.GraffitiData(SimpleGraffitiBitmapProvider.getInstance(mDownloader), graffitiBean);
-        } else {
-            graffitiData = new GraffitiView.GraffitiData(SimpleGraffitiBitmapProvider.getInstance(mDownloader), 0);
-        }
-
         SimpleGraffitiBitmapProvider.getInstance(mDownloader).download(GraffitiBean.GraffitiLayerBean.mTestUrls, new SimpleGraffitiBitmapProvider.IBitmapDownloader.IBitmapDownloadListener() {
             @Override
             public void onStart(String url) {
@@ -124,6 +115,15 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
                 Toast.makeText(GraffitiViewActivity.this, "Ready to show", Toast.LENGTH_SHORT).show();
             }
         }, false);
+
+
+        GraffitiView.GraffitiData graffitiData = null;
+        if (getIntent().getSerializableExtra(KEY_GRAFFITI_BEAN) instanceof GraffitiBean) {
+            GraffitiBean graffitiBean = (GraffitiBean) getIntent().getSerializableExtra(KEY_GRAFFITI_BEAN);
+            graffitiData = new GraffitiView.GraffitiData(SimpleGraffitiBitmapProvider.getInstance(mDownloader), graffitiBean);
+        } else {
+            graffitiData = new GraffitiView.GraffitiData(SimpleGraffitiBitmapProvider.getInstance(mDownloader), 0);
+        }
 
         //select a bean
         mGraffitiView.setDrawObject(GraffitiBean.GraffitiLayerBean.buildTest());
