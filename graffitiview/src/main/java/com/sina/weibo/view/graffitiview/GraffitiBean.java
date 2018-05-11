@@ -17,7 +17,7 @@ public class GraffitiBean implements Serializable {
 
     static Gson GSON = new Gson();
 
-    @SerializedName("note")
+    @SerializedName("node")
     private List<GraffitiLayerBean> mLayers;
 
     /**
