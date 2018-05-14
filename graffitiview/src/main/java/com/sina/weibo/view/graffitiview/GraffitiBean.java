@@ -11,8 +11,18 @@ import java.util.List;
 
 /**
  * Created by fishyu on 2018/5/7.
+ * <p>
+ * Data beans
+ * <p>
+ * {@link GraffitiBean} -> {@link GraffitiView.GraffitiData}
+ * {@link GraffitiLayerBean} -> {@link GraffitiView.GraffitiData.GraffitiLayerData}
+ * {@link GraffitiLayerBean.GraffitiNoteBean} -> {@link GraffitiView.GraffitiData.GraffitiLayerData.GraffitiNoteData}
+ * <p>
+ * <p>
+ * <p>
+ * PS:因为跟IOS理解上的差异，实现上 Android 比 IOS 多了一层内部 Layer。简单说 IOS 所有类型的 礼物画在同一Layer（目前IOS只有一个Layer），
+ * 而Android只有一样的礼物才可能画在同一Layer。
  */
-
 public class GraffitiBean implements Serializable {
 
     static Gson GSON = new Gson();
@@ -57,15 +67,6 @@ public class GraffitiBean implements Serializable {
      */
     public transient static final float ReferenceCanvasHeight = 332.0f;
 
-
-    public float getDrawDeviceWidth() {
-        return drawDeviceWidth;
-    }
-
-    public float getDrawDeviceHeight() {
-        return drawDeviceHeight;
-    }
-
     public GraffitiBean() {
 
     }
@@ -88,7 +89,7 @@ public class GraffitiBean implements Serializable {
         drawDeviceWidth = graffitiData.getCanvasWidth();
         drawDeviceHeight = graffitiData.getCanvasHeight();
         mLayers = new ArrayList<>();
-        maxNoteNumber = graffitiData.getMaxNoteNumber();
+        maxNoteNumber = graffitiData.getNoteMaxNumber();
         for (GraffitiView.GraffitiData.GraffitiLayerData layerData : graffitiData.getLayers()) {
             GraffitiBean.GraffitiLayerBean bean = new GraffitiBean.GraffitiLayerBean(layerData);
             mLayers.add(bean);
@@ -133,6 +134,8 @@ public class GraffitiBean implements Serializable {
         private String mNoteDrawableRes;
 
         private transient final static int mAnimation = 1;
+
+        private transient final static int mAnimationDuration = 1000;
 
         @SerializedName("points")
         private List<GraffitiNoteBean> mNotes;
@@ -197,6 +200,10 @@ public class GraffitiBean implements Serializable {
             return mAnimation;
         }
 
+        public long getAnimationDuration() {
+            return mAnimationDuration;
+        }
+
         public void setId(String id) {
             this.id = id;
         }
@@ -246,7 +253,6 @@ public class GraffitiBean implements Serializable {
         static {
             mTestUrls.add("https://alcdn.img.xiaoka.tv/20180315/25f/de5/0/25fde524fdc897b572691ea9d9375367.png");
             mTestUrls.add("https://alcdn.img.xiaoka.tv/20180315/79f/000/0/79f0009b39aae27b2a84b6936c9b2ad8.png");
-//            mTestUrls.add(" https://alcdn.img.xiaoka.tv/20180322/6f6/225/0/6f62255f7dca9be5ccacf52dcd66056f.png");
         }
 
         public static final GraffitiBean.GraffitiLayerBean buildTest() {

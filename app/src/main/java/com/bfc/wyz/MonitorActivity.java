@@ -24,7 +24,7 @@ public class MonitorActivity extends Activity {
         setContentView(R.layout.monitor_activity);
         mEditText = findViewById(R.id.monitor);
 
-        //show
+        //showLayers
         String value = getIntent().getStringExtra(KEY_CONTENT);
         mEditText.setText(value);
     }

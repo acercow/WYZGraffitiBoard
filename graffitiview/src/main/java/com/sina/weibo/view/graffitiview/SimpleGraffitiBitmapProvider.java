@@ -14,7 +14,8 @@ import java.util.Map;
  * Created by fishyu on 2018/5/10.
  * <p>
  * <p>
- * Implement for {@link GraffitiView.IBitmapProvider}
+ * <p>
+ * Demo implement for {@link GraffitiView.IBitmapProvider}
  * <p>
  * <p>
  * 1,Network download
@@ -72,14 +73,6 @@ public class SimpleGraffitiBitmapProvider implements GraffitiView.IBitmapProvide
          */
         void download(String url, IBitmapDownloadListener listener);
 
-
-        /**
-         * Loading cache of url
-         *
-         * @param url
-         * @return
-         */
-        Bitmap loadCache(String url);
     }
 
 
@@ -231,26 +224,26 @@ public class SimpleGraffitiBitmapProvider implements GraffitiView.IBitmapProvide
     }
 
     @Override
-    public Bitmap getBitmap(final String url) {
-        Log.v(TAG, "getBitmap url -> " + url);
-        if (TextUtils.isEmpty(url)) {
+    public Object getBitmap(final String id) {
+        Log.v(TAG, "getBitmap url -> " + id);
+        if (TextUtils.isEmpty(id)) {
             return null;
         }
 
-        Bitmap cache = null;
-        cache = getCache(url);
-        if (cache != null) {
-            return cache;
+//        Bitmap cache = null;
+//        cache = getCache(id);
+//        if (cache != null) {
+//            return cache;
+//        }
+
+        //return all bitmaps.
+        if (isBitmapsReady()) {
+            List<Bitmap> bitmaps = new ArrayList<>(mCaches.values());
+            return bitmaps.toArray(new Bitmap[]{});
         }
 
-        //bug protection for ImageDownloader
-        cache = mBitmapDownloader.loadCache(url);
-        if (cache != null) {
-            cache(url, cache);
-            return getBitmap(url);
-        }
 
-        download(url, null);
+        download(id, null);
         return null;
     }
 
@@ -307,13 +300,6 @@ public class SimpleGraffitiBitmapProvider implements GraffitiView.IBitmapProvide
      * @param listener
      */
     public void download(String url, final IBitmapDownloader.IBitmapDownloadListener listener) {
-        Bitmap cache = mBitmapDownloader.loadCache(url);
-        if (cache != null) {
-            listener.onStart(url);
-            listener.onComplete(url, cache, null);
-            return;
-        }
-
         //no cache, download it
         IBitmapDownloader.IBitmapDownloadListener internalListener = new IBitmapDownloader.IBitmapDownloadListener() {
             @Override

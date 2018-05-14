@@ -14,12 +14,22 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.LinearInterpolator;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Created by fishyu on 2018/4/28.
+ * <p>
+ * The philosophy of Design is Data-Drive-Mode:
+ * <p>
+ * Data [{@link GraffitiData}, {@link GraffitiData.GraffitiLayerData}, {@link GraffitiData.GraffitiLayerData}]
+ * <p>
+ * View [{@link GraffitiView}, {@link GraffitiLayerView}]
+ * <p>
+ * Data Drives[#notifyDataChanged()] View
+ * <p>
  * <p>
  * Two mode:(See {@link GraffitiData} for more detail)<br>
  * 1,READ-MODE<br>
@@ -69,7 +79,7 @@ public class GraffitiView extends ViewGroup {
 
         @Override
         public void onDataChanged(GraffitiView graffitiView, GraffitiBean.GraffitiLayerBean drawingObject) {
-            mGraffitiData.updateTotalNoteNumber();
+            mGraffitiData.updateNoteTotalNumber();
             Message message = Message.obtain();
             message.what = ON_DATA_CHANGED;
             message.obj = drawingObject;
@@ -87,26 +97,7 @@ public class GraffitiView extends ViewGroup {
 
     private ICallback mInternalCallback = new InternalCallback();
 
-    private Runnable showNotes = new Runnable() {
-        @Override
-        public void run() {
-            if (mGraffitiData == null) {
-                //may be set null ?
-                return;
-            }
-            if (!mGraffitiData.isBitmapsLoaded()) {
-                Log.e(TAG, "Resources is not ready, can't show!");
-                postDelayed(showNotes, 300);
-                return;
-            } else if (!mGraffitiData.isBitmapsReady(mGraffitiData.getLayerResources())) {
-                Log.e(TAG, "Necessary resources is not ready, can't show!");
-                postDelayed(showNotes, 300);
-                return;
-            }
-            notifyDataChanged();
-
-        }
-    };
+    private ShowLayersTask mShowLayersTask;
 
     public GraffitiView(Context context) {
         super(context);
@@ -121,9 +112,9 @@ public class GraffitiView extends ViewGroup {
     }
 
     /**
-     * 初始化
+     * Initializing
      *
-     * @param initData READ-MODE must not be null, otherwise would auto to be WRITE-MODE.
+     * @param initData Must not be null! See {@link GraffitiData}.
      */
     public void installData(GraffitiData initData) {
         if (initData == null) {
@@ -154,12 +145,10 @@ public class GraffitiView extends ViewGroup {
                 }
             });
         }
-
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        Log.e(TAG, "onMeasure mGraffitiData -> " + mGraffitiData);
         // square this view
         final int width = MeasureSpec.getSize(widthMeasureSpec);
         heightMeasureSpec = MeasureSpec.makeMeasureSpec((int) (width * GraffitiData.getHeightWidthPercentage()), MeasureSpec.EXACTLY);
@@ -176,8 +165,6 @@ public class GraffitiView extends ViewGroup {
 
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
-        Log.e(TAG, "onLayout mGraffitiData -> " + mGraffitiData);
-
         if (mGraffitiData != null) {
             int count = getChildCount();
             for (int i = 0; i < count; i++) {
@@ -190,17 +177,13 @@ public class GraffitiView extends ViewGroup {
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
-        Log.e(TAG, "onSizeChanged mGraffitiData -> " + mGraffitiData);
-
         if (mGraffitiData != null) {
             if (w != oldw || h != oldh) {
                 if (w >= 0 && h >= 0) {
                     if (mGraffitiData.installView(w, h)) {
-                        Log.e(TAG, "View installed, all data is ready.");
                         if (mGraffitiData.isReadMode()) {
-                            Log.e(TAG, "read mode, ready to show layers.");
                             mGraffitiData.installLayers();
-                            post(showNotes);
+                            showLayers();
                         }
                     }
                 }
@@ -209,12 +192,10 @@ public class GraffitiView extends ViewGroup {
     }
 
     /**
-     * 1, Update data <br>
-     * 2, Notify view updating
+     * Input -> Data --notifyDataChanged()--> View
      */
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        Log.v(TAG, "onTouchEvent");
         //can not write
         if (!checkWritable()) {
             return true;
@@ -225,7 +206,7 @@ public class GraffitiView extends ViewGroup {
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
             if (checkWritableActionDown()) {
                 mDrawingLayer = mGraffitiData.getDrawingLayer(getCurrentDrawObject());
-                if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, null, pointX, pointY, mGraffitiData.getLeftNoteNumber()))) {
+                if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, null, pointX, pointY, mGraffitiData.getNoteLeftNumber()))) {
                     notifyDataChanged(mDrawingLayer, true);
                 }
                 return true;
@@ -234,13 +215,13 @@ public class GraffitiView extends ViewGroup {
             // Checks for the event that occurs
             switch (event.getAction()) {
                 case MotionEvent.ACTION_MOVE:
-                    if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY, mGraffitiData.getLeftNoteNumber()))) {
+                    if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY, mGraffitiData.getNoteLeftNumber()))) {
                         notifyDataChanged(mDrawingLayer, true);
                     }
                     return true;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
-                    if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY, mGraffitiData.getLeftNoteNumber()))) {
+                    if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY, mGraffitiData.getNoteLeftNumber()))) {
                         notifyDataChanged(mDrawingLayer, true);
                     }
                     return true;
@@ -248,7 +229,6 @@ public class GraffitiView extends ViewGroup {
                     return true;
             }
         }
-
         return true;
     }
 
@@ -272,12 +252,13 @@ public class GraffitiView extends ViewGroup {
         }
 
         if (mGraffitiData == null) {
+            mInternalCallback.onMessage(ICallback.MSG_GRAFFITI_DATA_NOT_INSTALLED);
             throw new IllegalStateException("You have not call#installData(GraffitiData) to install data.");
         }
 
         if (!mGraffitiData.isViewInstalled()) {
             Log.e(TAG, "GraffitiData is not installed");
-            mInternalCallback.onMessage(ICallback.MSG_GRAFFITIDATA_NOT_INSTALLED);
+            mInternalCallback.onMessage(ICallback.MSG_GRAFFITI_DATA_NOT_INSTALLED);
             return false;
         }
         return true;
@@ -291,12 +272,12 @@ public class GraffitiView extends ViewGroup {
      */
     protected boolean checkWritableActionDown() {
         if (mGraffitiData.isReadMode()) {
-            Log.e(TAG, "player mode, just show notes");
+            Log.e(TAG, "player mode, just showLayers notes");
             mInternalCallback.onMessage(ICallback.MSG_READ_MODE);
             return false;
         }
 
-        if (mGraffitiData.getLeftNoteNumber() <= 0) {
+        if (mGraffitiData.getNoteLeftNumber() <= 0) {
             Log.e(TAG, "Reached max note number, can not draw.");
             mInternalCallback.onMessage(ICallback.MSG_MAX_NOTE_REACHED);
             return false;
@@ -304,19 +285,19 @@ public class GraffitiView extends ViewGroup {
 
         if (getCurrentDrawObject() == null) {
             Log.e(TAG, "GraffitiLayerBean is not set, can not draw.");
-            mInternalCallback.onMessage(ICallback.MSG_RESOURCE_NOT_READY);
+            mInternalCallback.onMessage(ICallback.MSG_BITMAP_NOT_READY);
             return false;
         }
 
-        if (!mGraffitiData.isBitmapsLoaded()) {
+        if (!mGraffitiData.isBitmapsReady()) {
             Log.e(TAG, "resources is not ready, nothing to draw.");
-            mInternalCallback.onMessage(ICallback.MSG_RESOURCE_NOT_READY);
+            mInternalCallback.onMessage(ICallback.MSG_BITMAP_NOT_READY);
             return false;
         }
 
         if (!mGraffitiData.isBitmapReady(getCurrentDrawObject().getNoteDrawableRes())) {
             Log.e(TAG, "GraffitiLayerBean's resources is not ready, can not draw.");
-            mInternalCallback.onMessage(ICallback.MSG_RESOURCE_NOT_READY);
+            mInternalCallback.onMessage(ICallback.MSG_BITMAP_NOT_READY);
             return false;
         }
 
@@ -324,7 +305,76 @@ public class GraffitiView extends ViewGroup {
     }
 
     /**
-     * Notify data changed, time to update view
+     * Show Layers if ReadMode
+     */
+    private class ShowLayersTask implements Runnable {
+
+        final long DELAY = 500;
+        int retryCount = 3;
+        boolean mCanceled = false;
+
+        @Override
+        public void run() {
+            if (mCanceled) {
+                return;
+            }
+            if (mGraffitiData == null) {
+                //may be set null ?
+                mInternalCallback.onMessage(ICallback.MSG_GRAFFITI_DATA_NOT_INSTALLED);
+                return;
+            }
+            if (!mGraffitiData.isBitmapsReady()) {
+                Log.e(TAG, "Resources is not ready, can't showLayers!");
+                mInternalCallback.onMessage(ICallback.MSG_BITMAP_NOT_READY);
+                retry();
+                return;
+            } else if (!mGraffitiData.isBitmapsReady(mGraffitiData.getLayerNoteBitmapIds())) {
+                Log.e(TAG, "Necessary resources is not ready, can't showLayers!");
+                mInternalCallback.onMessage(ICallback.MSG_BITMAP_NOT_READY);
+                retry();
+                return;
+            }
+            notifyDataChanged();
+        }
+
+        private final void retry() {
+            if (retryCount > 0) {
+                removeCallbacks(this);
+                postDelayed(this, DELAY);
+                retryCount--;
+            }
+        }
+
+        public void cancel() {
+            removeCallbacks(this);
+            mCanceled = true;
+        }
+
+        public void start() {
+            removeCallbacks(this);
+            post(this);
+        }
+    }
+
+    /**
+     * Show layers
+     */
+    protected void showLayers() {
+        if (!getGraffitiData().isReadMode()) {
+            throw new RuntimeException("#showLayers can only be called when GraffitiData#isReadMode() true. " +
+                    "You can update view call GraffitiView#notifyDataChanged() if you data changed when GraffitiData#isReadMode() false.");
+        }
+        if (mShowLayersTask != null) {
+            mShowLayersTask.cancel();
+        }
+        mShowLayersTask = new ShowLayersTask();
+        mShowLayersTask.start();
+    }
+
+    /**
+     * Notify data changed, time to update view.
+     * <p>
+     * Drive part of Data-Drive-Mode.
      */
     public void notifyDataChanged() {
         GraffitiData data = mGraffitiData;
@@ -350,7 +400,6 @@ public class GraffitiView extends ViewGroup {
                 notifyDataChanged(layerData, false);
             }
         }
-
         post(new Runnable() {
             @Override
             public void run() {
@@ -386,7 +435,6 @@ public class GraffitiView extends ViewGroup {
         }
     }
 
-
     /**
      * Returning selected {@link GraffitiBean.GraffitiLayerBean}
      *
@@ -417,7 +465,6 @@ public class GraffitiView extends ViewGroup {
         return mGraffitiData;
     }
 
-
     /**
      * Setting {@link ICallback}
      *
@@ -428,21 +475,36 @@ public class GraffitiView extends ViewGroup {
     }
 
     /**
-     * Callbacks when internal data changed.
+     * Callbacks when internal data changed, errors, and etc.
      */
     public interface ICallback {
 
+        /**
+         * GraffitiView has been disabled
+         */
         int MSG_DISABLED = 1;
 
+        /**
+         * GraffitiView is in ReadMode
+         */
         int MSG_READ_MODE = 2;
 
+        /**
+         * GraffitiView is not ready for WriteMode
+         */
         int MSG_VIEW_NOT_READY = 3;
 
-        int MSG_RESOURCE_NOT_READY = 4;
+        /**
+         * Bitmap is not ready returned by {@link IBitmapProvider}
+         */
+        int MSG_BITMAP_NOT_READY = 4;
 
+        /**
+         * You have reached the limit in WriteMode, See {@link GraffitiData#mMaxNoteNumber}
+         */
         int MSG_MAX_NOTE_REACHED = 5;
 
-        int MSG_GRAFFITIDATA_NOT_INSTALLED = 6;
+        int MSG_GRAFFITI_DATA_NOT_INSTALLED = 6;
 
         /**
          * @param graffitiView  GraffitiView itself
@@ -453,7 +515,9 @@ public class GraffitiView extends ViewGroup {
 
 
         /**
-         * Notify messages
+         * Notify messages.
+         * <p>
+         * See {@link #MSG_BITMAP_NOT_READY} ...
          *
          * @param msg
          */
@@ -462,14 +526,13 @@ public class GraffitiView extends ViewGroup {
 
 
     /**
-     * Layer view
+     * Responding for drawing layers, notes.
      */
     private static class GraffitiLayerView extends View {
 
         final String TAG = GraffitiLayerView.class.getSimpleName() + this;
 
         private int mBlankCanvas = -1;
-        private Bitmap mNoteBitmap;
 
         public GraffitiLayerView(Context context, GraffitiData.GraffitiLayerData data) {
             super(context);
@@ -482,13 +545,10 @@ public class GraffitiView extends ViewGroup {
                     notifyDataChanged();
                 }
             });
-
-            mNoteBitmap = getLayerData().getNoteBitmap();
         }
 
-
         /**
-         * Getting layer data
+         * Getting {@link GraffitiData.GraffitiLayerData}
          *
          * @return
          */
@@ -496,9 +556,8 @@ public class GraffitiView extends ViewGroup {
             return (GraffitiData.GraffitiLayerData) getTag();
         }
 
-
         /**
-         * Update view
+         * Drive part of Data-Drive-Mode
          */
         public void notifyDataChanged() {
             invalidate();
@@ -508,7 +567,7 @@ public class GraffitiView extends ViewGroup {
         @Override
         protected void onAttachedToWindow() {
             super.onAttachedToWindow();
-            getLayerData().startAnimatorIfExits();
+            getLayerData().startAnimatorIfExits(false);
         }
 
         @Override
@@ -521,7 +580,7 @@ public class GraffitiView extends ViewGroup {
         protected void onWindowVisibilityChanged(int visibility) {
             super.onWindowVisibilityChanged(visibility);
             if (visibility == VISIBLE) {
-                getLayerData().startAnimatorIfExits();
+                getLayerData().startAnimatorIfExits(false);
             } else {
                 getLayerData().stopAnimatorIfExits();
             }
@@ -533,11 +592,11 @@ public class GraffitiView extends ViewGroup {
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
-            if (mNoteBitmap == null || mNoteBitmap.isRecycled()) {
-                Log.e(TAG, "How could note bitmap be null or recycled ?!");
+            Bitmap bitmap = getLayerData().getCalculateBitmap();
+            if (bitmap == null || bitmap.isRecycled()) {
+                Log.e(TAG, "Error !!! Bitmap is null or recycled !!! DEBUG: id -> " + getLayerData().getNoteBitmapId());
                 return;
             }
-
             if (getLayerData().isForceDrawAll()) {
                 //TODO clean the canvas ??
 //            Log.e(TAG, " restore canvas to -> " + mBlankCanvas);
@@ -550,7 +609,7 @@ public class GraffitiView extends ViewGroup {
                 if (note.mDrawn && !getLayerData().isForceDrawAll()) {
                     break;
                 }
-                drawNote(canvas, note);
+                drawNote(canvas, note, bitmap);
                 note.mDrawn = true;
             }
 
@@ -564,8 +623,8 @@ public class GraffitiView extends ViewGroup {
          * @param canvas
          * @param note   Note information
          */
-        protected void drawNote(Canvas canvas, GraffitiData.GraffitiLayerData.GraffitiNoteData note) {
-            onDrawNote(canvas, note, mNoteBitmap, note.getCalculateRectF());
+        protected void drawNote(Canvas canvas, GraffitiData.GraffitiLayerData.GraffitiNoteData note, Bitmap bitmap) {
+            onDrawNote(canvas, note, bitmap, note.getCalculateRectF());
         }
 
 
@@ -587,7 +646,12 @@ public class GraffitiView extends ViewGroup {
     /* ########################################## Datas ########################################### */
 
     /**
-     * Created by fishyu on 2018/4/28.
+     * Data of Data-Drive-Mode.
+     * <p>
+     * Drives {@link GraffitiView} directly.
+     * <p>
+     * <p>
+     * Description of GraffitiView. Managing write/read information, status, controls and etc.
      * <p>
      * <p>
      * Concepts: <br>
@@ -599,17 +663,29 @@ public class GraffitiView extends ViewGroup {
      */
     public static class GraffitiData {
 
-        private IBitmapProvider mBitmapManager;
+        /**
+         * Bitmap Provider
+         */
+        private IBitmapProvider mBitmapProvider;
 
         /**
-         * 图层
+         * Layers of GraffitiView
          */
         private List<GraffitiLayerData> mLayers = new ArrayList<>();
 
+        /**
+         * ReadMode's source
+         */
         private GraffitiBean mGraffitiBean;
 
+        /**
+         * Max numbers of note you can write onto the GraffitiView
+         */
         private int mMaxNoteNumber;
 
+        /**
+         * Current total Note number
+         */
         private int mTotalNoteNumber = 0;
 
         /**
@@ -623,32 +699,39 @@ public class GraffitiView extends ViewGroup {
         private ICoordinateConverter mDeviceCoordinateConverter;
 
         private float mCanvasWidth;
-
         private float mCanvasHeight;
+
+        /**
+         * Auto start animations if layers has any animation.
+         */
+        private boolean mAutoStartAnimationIfExits = false;
 
         /**
          * Constructor from {@link GraffitiBean}, which should be installed later checked by {@link #isReadMode()}
          *
-         * @param graffitiBean
+         * @param graffitiBean ReadMode's data source
          */
         public GraffitiData(IBitmapProvider bitmapManager, GraffitiBean graffitiBean) {
-            this(bitmapManager, 0);
+            this(bitmapManager, 0, false);
             mGraffitiBean = graffitiBean;
         }
 
         /**
-         * Default
+         * @param bitmapManager             See {@link IBitmapProvider}
+         * @param maxNote                   See {@link GraffitiData#mMaxNoteNumber}
+         * @param autoStartAnimationIfExits See {@link GraffitiData#mAutoStartAnimationIfExits}
          */
-        public GraffitiData(IBitmapProvider bitmapManager, int maxNote) {
+        public GraffitiData(IBitmapProvider bitmapManager, int maxNote, boolean autoStartAnimationIfExits) {
             if (bitmapManager == null) {
                 throw new IllegalArgumentException("Must pass a valid IBitmapManager!");
             }
-            mBitmapManager = bitmapManager;
+            mBitmapProvider = bitmapManager;
             mMaxNoteNumber = maxNote;
+            mAutoStartAnimationIfExits = autoStartAnimationIfExits;
         }
 
         /**
-         * Install view
+         * Called when view's size changed.
          *
          * @param viewWidth
          * @param viewHeight
@@ -685,18 +768,25 @@ public class GraffitiView extends ViewGroup {
             return mReferenceCoordinateConverter != null;
         }
 
+        /**
+         * Install layers
+         */
         public void installLayers() {
             if (isReadMode()) {
                 // Used for calculate note info(most is because ios used different strategy for note)
+                GraffitiLayerData layerData = null;
                 for (GraffitiBean.GraffitiLayerBean bean : mGraffitiBean.getLayers()) {
-                    GraffitiLayerData layerData = new GraffitiLayerData(bean);
+                    //try merge layers
+                    if (layerData == null || !layerData.isMergeAble(bean)) {
+                        layerData = new GraffitiLayerData(bean);
+                    }
                     addLayer(layerData);
                 }
             }
         }
 
         /**
-         * Whether or not we are in READ-MODE or note.
+         * Whether or not we are in READ-MODE.
          * <p>
          * For some details with READ-MODE see {@link GraffitiData}
          *
@@ -707,6 +797,8 @@ public class GraffitiView extends ViewGroup {
         }
 
         /**
+         * Canvas's height/width value.
+         *
          * @return
          */
         public static float getHeightWidthPercentage() {
@@ -714,54 +806,66 @@ public class GraffitiView extends ViewGroup {
         }
 
         /**
-         * Getting max note number.
+         * Getting the max number of notes to draw.
          *
          * @return
          */
-        public int getMaxNoteNumber() {
+        public int getNoteMaxNumber() {
             return mMaxNoteNumber;
         }
 
         /**
-         * Reached max note number or not.
+         * Getting the left numbers of notes to draw witch is defined by {@link #mMaxNoteNumber}
          *
          * @return
          */
-        public int getLeftNoteNumber() {
+        public int getNoteLeftNumber() {
             if (mMaxNoteNumber <= 0) {
                 return Integer.MAX_VALUE;
             }
-            return mMaxNoteNumber - getCurrentTotalNote();
+            return mMaxNoteNumber - getCurrentNoteTotalNumber();
         }
 
         /**
-         * Is all urls loaded finished or not.
+         * Is all bitmaps ready or not.
+         * <p>
+         * GraffitiView use this method to check whether we can write/read.
+         * <p>
+         * See also {@link IBitmapProvider}
          *
          * @return
          */
-        public boolean isBitmapsLoaded() {
-            return mBitmapManager.isBitmapsReady();
+        public boolean isBitmapsReady() {
+            return mBitmapProvider.isBitmapsReady();
         }
 
         /**
-         * Is resource ready
+         * Is the specific bitmap ready.
+         * <p>
+         * GraffitiView use this method to check whether we can write/read.
+         * <p>
+         * See also {@link IBitmapProvider}
          *
          * @return
          */
-        public boolean isBitmapReady(String url) {
-            return mBitmapManager.getBitmap(url) != null;
+        public boolean isBitmapReady(String id) {
+            return mBitmapProvider.getBitmap(id) != null;
         }
 
         /**
-         * Is all resources ready
+         * Is the specific bitmaps ready.
+         * <p>
+         * GraffitiView use this method to check whether we can write/read.
+         * <p>
+         * See also {@link IBitmapProvider}
          *
          * @return
          */
-        public boolean isBitmapsReady(List<String> urls) {
-            if (urls == null) {
+        public boolean isBitmapsReady(List<String> ids) {
+            if (ids == null) {
                 return false;
             }
-            for (String url : urls) {
+            for (String url : ids) {
                 if (!isBitmapReady(url)) {
                     return false;
                 }
@@ -769,6 +873,15 @@ public class GraffitiView extends ViewGroup {
             return true;
         }
 
+
+        /**
+         * Start layers animation if it has.
+         */
+        public void startAnimationsIfExits() {
+            for (GraffitiData.GraffitiLayerData layerData : getLayers()) {
+                layerData.startAnimatorIfExits(true);
+            }
+        }
 
         /**
          * Adding layer
@@ -783,7 +896,7 @@ public class GraffitiView extends ViewGroup {
                 throw new IllegalArgumentException("layer already in GraffitiData");
             }
             mLayers.add(data);
-            updateTotalNoteNumber();
+            updateNoteTotalNumber();
         }
 
         /**
@@ -795,7 +908,7 @@ public class GraffitiView extends ViewGroup {
             if (data != null) {
                 mLayers.remove(data);
             }
-            updateTotalNoteNumber();
+            updateNoteTotalNumber();
         }
 
         /**
@@ -816,18 +929,19 @@ public class GraffitiView extends ViewGroup {
          */
         public void clearLayers() {
             mLayers.clear();
-            updateTotalNoteNumber();
+            updateNoteTotalNumber();
         }
 
         /**
-         * Is merge same layer
+         * Is we merge layers if possible.
+         * <p>
+         * Working with {@link GraffitiLayerData#isMergeAble(GraffitiBean.GraffitiLayerBean)}.
          *
          * @return
          */
         public boolean isMergeLayer() {
             return true;
         }
-
 
         public List<GraffitiLayerData> getLayers() {
             return mLayers;
@@ -842,13 +956,12 @@ public class GraffitiView extends ViewGroup {
             return mLayers == null ? 0 : mLayers.size();
         }
 
-
         /**
-         * Update total note
+         * Updating current total number of note
          *
          * @return
          */
-        public int updateTotalNoteNumber() {
+        public int updateNoteTotalNumber() {
             int total = 0;
             for (GraffitiLayerData layerData : mLayers) {
                 total += layerData.getNotes().size();
@@ -858,29 +971,29 @@ public class GraffitiView extends ViewGroup {
         }
 
         /**
-         * Getting total note
+         * Getting current total number of note
          *
          * @return
          */
-        public int getCurrentTotalNote() {
+        public int getCurrentNoteTotalNumber() {
             if (mTotalNoteNumber <= 0 && getLayerCount() > 0) {
-                return updateTotalNoteNumber();
+                return updateNoteTotalNumber();
             }
             return mTotalNoteNumber;
         }
 
         /**
-         * Get layer resources
+         * Getting ids of {@link GraffitiLayerData#getNoteBitmapId()} of {@link #getLayers()}
          *
          * @return
          */
-        public List getLayerResources() {
+        public List getLayerNoteBitmapIds() {
             if (mLayers != null && mLayers.size() > 0) {
                 List<String> list = new ArrayList<>();
                 for (GraffitiLayerData layerData : mLayers) {
-                    String url = layerData.getNoteDrawableRes();
-                    if (!list.contains(url)) {
-                        list.add(url);
+                    String id = layerData.getNoteBitmapId();
+                    if (!list.contains(id)) {
+                        list.add(id);
                     }
                 }
                 return list;
@@ -889,7 +1002,7 @@ public class GraffitiView extends ViewGroup {
         }
 
         /**
-         * Returning drawing layer
+         * Getting the drawing layer witch to write next.
          *
          * @param layerBean
          * @return
@@ -915,6 +1028,15 @@ public class GraffitiView extends ViewGroup {
         }
 
 
+        /**
+         * Data of Data-Drive-Mode
+         * <p>
+         * Drives {@link GraffitiLayerView} directly.
+         * <p>
+         * Managers the layers information, like Note descriptions, notes and etc.
+         * <p>
+         * See also {@link GraffitiBean.GraffitiLayerBean}
+         */
         public class GraffitiLayerData {
 
             final String TAG = GraffitiLayerData.class.getSimpleName();
@@ -935,7 +1057,10 @@ public class GraffitiView extends ViewGroup {
 
             private int mFlag = 0;
 
-            AnimatorFactory.AbstractBaseAnimator mAnimator; // 是否有动画
+            private AnimatorFactory.AbstractBaseAnimator mAnimator; // 是否有动画
+
+            private Bitmap mBitmap;
+            private Bitmap[] mBitmaps;
 
             public GraffitiLayerData(GraffitiBean.GraffitiLayerBean layerBean) {
                 if (mReferenceCoordinateConverter == null) {
@@ -949,10 +1074,13 @@ public class GraffitiView extends ViewGroup {
 
                 installView();
 
-                //install note if needed
+                //install notes if needed
                 if (isReadMode()) {
                     installNotes();
                 }
+
+                //init in the first place
+                getNoteBitmap(-1);
             }
 
             private void installView() {
@@ -960,6 +1088,7 @@ public class GraffitiView extends ViewGroup {
                 mNoteHeight = GraffitiData.this.mReferenceCoordinateConverter.convertHeightTargetToPixel(mLayerBean.getPercentageNoteHeight());
                 mNoteDistance = GraffitiData.this.mReferenceCoordinateConverter.convertHeightTargetToPixel(mLayerBean.getPercentageNoteDistance());
             }
+
 
             /**
              * Is view installed or not.
@@ -994,7 +1123,7 @@ public class GraffitiView extends ViewGroup {
             }
 
             /**
-             * installView animator
+             * InstallView animator
              *
              * @param updateRunnable
              */
@@ -1032,21 +1161,50 @@ public class GraffitiView extends ViewGroup {
                 return mNoteDistance;
             }
 
-            public String getNoteDrawableRes() {
+            public String getNoteBitmapId() {
                 return mLayerBean.getNoteDrawableRes();
             }
 
             /**
-             * Getting note bitmap
+             * Getting the Bitmap/Animated Bitmap
              *
+             * @param timeLine from [0 ~ frame-duration], used for fetch frame bitmap of bitmaps
              * @return
              */
-            public Bitmap getNoteBitmap() {
-                return GraffitiData.this.mBitmapManager.getBitmap(getNoteDrawableRes());
+            public Bitmap getNoteBitmap(long timeLine) {
+                if (mBitmap == null && mBitmaps == null) {
+                    //refresh bitmaps if none
+                    Object bitmapObject = mBitmapProvider.getBitmap(getNoteBitmapId());
+                    if (bitmapObject instanceof Bitmap) {
+                        mBitmap = (Bitmap) bitmapObject;
+                    } else if (bitmapObject instanceof Bitmap[]) {
+                        mBitmaps = (Bitmap[]) bitmapObject;
+                    }
+                }
+                if (mBitmap != null) {
+                    return mBitmap;
+                } else if (mBitmaps != null && mBitmaps.length > 0) {
+                    int frameIndex = 0;
+                    if (timeLine > 0) {
+                        frameIndex = (int) (timeLine / (getGraffitiLayerBean().getAnimationDuration() / mBitmaps.length));
+                        frameIndex %= mBitmaps.length;
+                    }
+                    return mBitmaps[frameIndex];
+                }
+                return null;
             }
 
             /**
-             * Getting internal {@link GraffitiBean.GraffitiLayerBean}
+             * Getting calculate bitmap of all notes
+             *
+             * @return
+             */
+            public Bitmap getCalculateBitmap() {
+                return mAnimator == null ? getNoteBitmap(-1) : mAnimator.getAnimateBitmap();
+            }
+
+            /**
+             * Getting {@link GraffitiBean.GraffitiLayerBean}
              *
              * @return
              */
@@ -1054,15 +1212,43 @@ public class GraffitiView extends ViewGroup {
                 return mLayerBean;
             }
 
-            @Deprecated
+
+            /**
+             * Is current mergeAble to bean passed.
+             * <p>
+             * <p>
+             * See also {@link GraffitiData#isMergeLayer()}
+             *
+             * @param bean
+             * @return
+             */
             public boolean isMergeAble(GraffitiBean.GraffitiLayerBean bean) {
-                return !isHasAnimation() && mLayerBean.equals(bean) && mNotes.size() < 10;
+                return mLayerBean.equals(bean) && mNotes.size() < 100;
             }
 
+            /**
+             * Current layer has animation or not.
+             *
+             * @return
+             */
             public boolean isHasAnimation() {
                 return mLayerBean.getAnimation() > 0;
             }
 
+            /**
+             * Getting duration of Animation
+             *
+             * @return
+             */
+            public long getAnimationDuration() {
+                return mLayerBean.getAnimationDuration();
+            }
+
+            /**
+             * Add note
+             *
+             * @param note
+             */
             public void addNote(GraffitiNoteData note) {
                 if (note == null || mNotes.contains(note)) {
                     return;
@@ -1083,6 +1269,7 @@ public class GraffitiView extends ViewGroup {
                 return true;
             }
 
+            @Deprecated
             protected void setFlag(int mask, int flag) {
                 mFlag = (mFlag & ~mask) | flag;
             }
@@ -1092,6 +1279,7 @@ public class GraffitiView extends ViewGroup {
              *
              * @param onlyOnce
              */
+            @Deprecated
             public void forceDrawAll(boolean onlyOnce) {
                 if (onlyOnce) {
                     setFlag(MASK_REDRAW, FLAG_REDRAW_ALL | FLAG_REDRAW_ONCE);
@@ -1101,34 +1289,47 @@ public class GraffitiView extends ViewGroup {
             }
 
             /**
+             * Is forcing drawing all
+             *
+             * @return
+             */
+            @Deprecated
+            public boolean isForceDrawAll() {
+                return (mFlag & FLAG_REDRAW_ALL) == 1;
+            }
+
+            /**
              * Finish draw all
              */
+            @Deprecated
             public void finishForceDrawAll(boolean forceFinish) {
                 if ((mFlag & FLAG_REDRAW_ONCE) == 1 || forceFinish) {
                     setFlag(MASK_REDRAW, ~FLAG_REDRAW_ALL | ~FLAG_REDRAW_ONCE);
                 }
             }
 
-
-            public void startAnimatorIfExits() {
+            /**
+             * Start animation if we has any.
+             *
+             * @param fromUser true ignores {@link GraffitiData#mAutoStartAnimationIfExits}.
+             */
+            public void startAnimatorIfExits(boolean fromUser) {
+                if (!fromUser && !mAutoStartAnimationIfExits) {
+                    return;
+                }
+                mAutoStartAnimationIfExits = true;
                 if (mAnimator != null) {
                     mAnimator.start();
                 }
             }
 
+            /**
+             * Stop animation if we has any.
+             */
             public void stopAnimatorIfExits() {
                 if (mAnimator != null) {
                     mAnimator.stop();
                 }
-            }
-
-            /**
-             * Is forcing drawing all
-             *
-             * @return
-             */
-            public boolean isForceDrawAll() {
-                return (mFlag & FLAG_REDRAW_ALL) == 1;
             }
 
             @Override
@@ -1144,16 +1345,14 @@ public class GraffitiView extends ViewGroup {
                         "]";
             }
 
+
             /**
-             * Getting {@link ICoordinateConverter}
-             *
-             * @return
+             * Data of Data-Drive-Mode
+             * <p>
+             * Descriptions of location/bitmaps of our drawing note of specific {@link GraffitiLayerData}.
+             * <p>
+             * See also {@link GraffitiBean.GraffitiLayerBean.GraffitiNoteBean}
              */
-            public ICoordinateConverter getCoordinateConverter() {
-                return mReferenceCoordinateConverter;
-            }
-
-
             public class GraffitiNoteData {
 
                 /**
@@ -1175,18 +1374,29 @@ public class GraffitiView extends ViewGroup {
                     mDrawn = false;
                 }
 
+                /**
+                 * Get the RectF of no animations.
+                 *
+                 * @return
+                 */
                 public RectF getOriginalRectF() {
                     return mOriginalRectF;
                 }
 
+                /**
+                 * Get the animated RectF
+                 *
+                 * @return
+                 */
                 public RectF getCalculateRectF() {
                     return mAnimator == null ? getOriginalRectF() : mAnimator.getAnimateRectF(getOriginalRectF(), mCalculateRectF);
                 }
 
-                public GraffitiLayerData getLayerData() {
-                    return GraffitiLayerData.this;
-                }
-
+                /**
+                 * Getting the {@link ICoordinateConverter} of this note. Needed by {@link GraffitiBean.GraffitiLayerBean.GraffitiNoteBean} for IOS.
+                 *
+                 * @return
+                 */
                 public ICoordinateConverter getCoordinateConverter() {
                     return mDeviceCoordinateConverter;
                 }
@@ -1208,13 +1418,13 @@ public class GraffitiView extends ViewGroup {
     /* ########################################## Tools ########################################### */
 
     /**
-     * Calculate next note
+     * The calculator of Next points of {@link GraffitiData.GraffitiLayerData.GraffitiNoteData}.
      */
     public interface INextNoteCalculator {
 
 
         /**
-         * 根据当前点 计算接下来的点
+         * Calculating ...
          *
          * @param layer
          * @param relative
@@ -1229,12 +1439,8 @@ public class GraffitiView extends ViewGroup {
      */
     public static class SimpleNextNoteCalculator implements INextNoteCalculator {
 
-
         static final String TAG = SimpleNextNoteCalculator.class.getSimpleName();
 
-        /**
-         * 优化内存，用于返回 数据
-         */
         private List<GraffitiData.GraffitiLayerData.GraffitiNoteData> mPool = new ArrayList<>();
 
         public SimpleNextNoteCalculator() {
@@ -1245,7 +1451,6 @@ public class GraffitiView extends ViewGroup {
         public List<GraffitiData.GraffitiLayerData.GraffitiNoteData> next(GraffitiData.GraffitiLayerData layer, GraffitiData.GraffitiLayerData.GraffitiNoteData relative, float x, float y, int maxNotes) {
             if (relative == null) {
                 GraffitiData.GraffitiLayerData.GraffitiNoteData note = layer.new GraffitiNoteData(x, y);
-                Log.e(TAG, "add note -> " + note);
                 mPool.clear();
                 mPool.add(note);
                 return mPool;
@@ -1261,7 +1466,6 @@ public class GraffitiView extends ViewGroup {
                     float gapY = (y - lastY) / ratio;
                     for (int i = 1; i <= ratio && i <= maxNotes; i++) {
                         GraffitiData.GraffitiLayerData.GraffitiNoteData note = layer.new GraffitiNoteData(lastX + gapX * i, lastY + gapY * i);
-                        Log.e(TAG, "add note -> " + note);
                         mPool.add(note);
                     }
                     return mPool;
@@ -1271,17 +1475,13 @@ public class GraffitiView extends ViewGroup {
         }
     }
 
-
     /**
-     * Created by fishyu on 2018/4/28.
-     * <p>
      * Coordinate converters.
      * <p>
      * See {@link GraffitiView} 's doc for more detail.
      * <p>
-     * 1,convert current-device's pixel value to/from target(REFERENCE/DEVICE/BEAN) value
+     * 1,convert current-device's pixel value to/from target(REFERENCE/DEVICE/BEAN) value.
      */
-
     public interface ICoordinateConverter {
 
         /**
@@ -1321,20 +1521,17 @@ public class GraffitiView extends ViewGroup {
     }
 
 
+    /**
+     * Simple impl of {@link ICoordinateConverter}
+     */
     public static class SimpleCoordinateConverter implements ICoordinateConverter {
 
         final float mWidthFactor;
         final float mHeightFactor;
 
         public SimpleCoordinateConverter(float targetWidth, float targetHeight, float viewWidth, float viewHeight) {
-
-            Log.v(TAG, "SimpleCoordinateConverter targetWidth -> " + targetWidth + " targetHeight -> " + targetHeight
-                    + " viewWidth -> " + viewWidth + " viewHeight -> " + viewHeight);
-
-
             mWidthFactor = targetWidth / viewWidth;
             mHeightFactor = targetHeight / viewHeight;
-//            mHeightFactor = mWidthFactor;
         }
 
         @Override
@@ -1356,9 +1553,7 @@ public class GraffitiView extends ViewGroup {
         public float convertHeightTargetToPixel(float heightTarget) {
             return heightTarget / mHeightFactor;
         }
-
     }
-
 
     /**
      * Animation Factory, managing all animators
@@ -1369,14 +1564,28 @@ public class GraffitiView extends ViewGroup {
         public final static int TRANSLATE = 2;
         public final static int ALPHA = 3;
         public final static int ROTATE = 4;
+        public final static int FRAME = 5;
         //weibo use
-        public final static int SHAKE_RETATE = 5;
+        public final static int SHAKE_RETATE = 6;
 
         public static AbstractBaseAnimator create(GraffitiData.GraffitiLayerData data, Runnable updateViewRunnable) {
-            return new ScaleAnimator(data, updateViewRunnable, 1000, 1.0f, 0.5f);
+            switch (data.getGraffitiLayerBean().getAnimation()) {
+                case SCALE:
+                    return new ScaleAnimator(data, updateViewRunnable, data.getAnimationDuration(), 1.0f, 0.5f);
+                case FRAME:
+                    return new FrameAnimator(data, updateViewRunnable, data.getAnimationDuration());
+            }
+            return new ScaleAnimator(data, updateViewRunnable, data.getAnimationDuration(), 1.0f, 0.5f);
         }
 
 
+        /**
+         * Animator interaction for {@link GraffitiView}
+         * <p>
+         * 1, Powered by {@link ObjectAnimator}
+         * 2, Size/Location animation support
+         * 3, Bitmap frame support
+         */
         public static abstract class AbstractBaseAnimator implements Animator.AnimatorListener, ValueAnimator.AnimatorUpdateListener {
 
             /**
@@ -1436,33 +1645,54 @@ public class GraffitiView extends ViewGroup {
 
             static final boolean ENABLE_ALIGN_CLOCK = false;
 
-            static InternalAlignClock mClock = ENABLE_ALIGN_CLOCK ? new InternalAlignClock() : null;
+            static InternalAlignClock mAlignClock = ENABLE_ALIGN_CLOCK ? new InternalAlignClock() : null;
 
-            private ObjectAnimator mAnimator;
+            private final ObjectAnimator mAnimator;
 
             private float mCurrentValue;
 
             private static final long ANIMATION_FRAME_TIME = 1000 / 45;
 
             private long mLastUpdateTime = 0;
+            private float mFrom;
 
             private GraffitiData.GraffitiLayerData mLayerData;
 
             public AbstractBaseAnimator(GraffitiData.GraffitiLayerData layerData, Runnable updateViewRunnable, long duration, float from, float to) {
+                if (layerData == null) {
+                    throw new IllegalArgumentException("GraffitiLayerData must not be null !");
+                }
+                if (updateViewRunnable == null) {
+                    throw new IllegalArgumentException("updateViewRunnable must not be null !");
+                }
                 mLayerData = layerData;
                 mUpdateViewRunnable = updateViewRunnable;
+                mFrom = from;
 
-                mAnimator = ObjectAnimator.ofFloat(AbstractBaseAnimator.this, "value", from, to);
-                mAnimator.setDuration(duration);
-                mAnimator.addListener(this);
-                mAnimator.addUpdateListener(this);
-                mAnimator.setRepeatCount(ValueAnimator.INFINITE);
-                mAnimator.setRepeatMode(ValueAnimator.REVERSE);
+                ObjectAnimator animator = ObjectAnimator.ofFloat(AbstractBaseAnimator.this, "value", from, to);
+                animator.setDuration(duration);
+                animator.addListener(this);
+                animator.addUpdateListener(this);
+                onConfigAnimator(animator);
+                mAnimator = animator;
+
+                setValue(from);
             }
 
 
             /**
-             * Start animation
+             * On configuring our internal {@link ObjectAnimator}
+             *
+             * @param animator
+             */
+            protected void onConfigAnimator(ObjectAnimator animator) {
+                animator.setRepeatCount(ValueAnimator.INFINITE);
+                animator.setRepeatMode(ValueAnimator.REVERSE);
+            }
+
+
+            /**
+             * Start animation.
              */
             public final void start() {
                 if (mAnimator.isRunning() || mAnimator.isStarted()) {
@@ -1472,7 +1702,7 @@ public class GraffitiView extends ViewGroup {
             }
 
             /**
-             * Stop animation
+             * Stop animation.
              */
             public final void stop() {
                 mAnimator.cancel();
@@ -1489,9 +1719,8 @@ public class GraffitiView extends ViewGroup {
                 return onCalculateRectF(input, out, mCurrentValue);
             }
 
-
             /**
-             * On calculate target rectF
+             * On calculating target rectF
              *
              * @param input
              * @param out
@@ -1499,6 +1728,27 @@ public class GraffitiView extends ViewGroup {
              * @return target
              */
             protected abstract RectF onCalculateRectF(RectF input, RectF out, float currentValue);
+
+
+            /**
+             * Calculate animated Bitmap
+             *
+             * @return
+             */
+            public final Bitmap getAnimateBitmap() {
+                return mLayerData.getNoteBitmap(onCalculateBitmapTimeLine(mAnimator.getDuration(), mCurrentValue));
+            }
+
+            /**
+             * On calculating target Bitmap.
+             * <p>
+             * Default no animated bitmaps.
+             *
+             * @return
+             */
+            protected long onCalculateBitmapTimeLine(long duration, float currentValue) {
+                return -1;
+            }
 
 
             @SuppressWarnings("unused")
@@ -1509,46 +1759,43 @@ public class GraffitiView extends ViewGroup {
 
             @Override
             public void onAnimationStart(Animator animation) {
-                Log.v(TAG, "onAnimationStart");
-                setValue(0);
+                setValue(mFrom);
                 mLayerData.forceDrawAll(false);
-                if (mClock != null) {
-                    mClock.start(mUpdateViewRunnable);
+                if (mAlignClock != null) {
+                    mAlignClock.start(mUpdateViewRunnable);
                 }
             }
 
             @Override
             public void onAnimationEnd(Animator animation) {
-                Log.v(TAG, "onAnimationEnd");
-                setValue(0);
+                setValue(mFrom);
                 notifyView();
-                if (mClock != null) {
-                    mClock.stop(mUpdateViewRunnable);
+                if (mAlignClock != null) {
+                    mAlignClock.stop(mUpdateViewRunnable);
                 }
             }
 
             @Override
             public void onAnimationCancel(Animator animation) {
-                Log.v(TAG, "onAnimationCancel");
-                setValue(0);
+                setValue(mFrom);
                 notifyView();
-                if (mClock != null) {
-                    mClock.stop(mUpdateViewRunnable);
+                if (mAlignClock != null) {
+                    mAlignClock.stop(mUpdateViewRunnable);
                 }
             }
 
             @Override
             public void onAnimationRepeat(Animator animation) {
+                //do nothing
             }
 
             @Override
             public void onAnimationUpdate(ValueAnimator animation) {
-                if (mClock == null) {
+                if (mAlignClock == null) {
                     if (System.currentTimeMillis() - mLastUpdateTime >= ANIMATION_FRAME_TIME) {
                         notifyView();
                     }
                 }
-
             }
 
             /**
@@ -1558,10 +1805,12 @@ public class GraffitiView extends ViewGroup {
                 mLastUpdateTime = System.currentTimeMillis();
                 mUpdateViewRunnable.run();
             }
-
         }
 
 
+        /**
+         * Demo impl
+         */
         public static class ScaleAnimator extends AbstractBaseAnimator {
 
             public ScaleAnimator(GraffitiData.GraffitiLayerData layerData, Runnable updateViewRunnable, long duration, float from, float to) {
@@ -1571,8 +1820,6 @@ public class GraffitiView extends ViewGroup {
             @Override
             protected RectF onCalculateRectF(RectF input, RectF out, float currentValue) {
                 //TODO 1,TransFormer 2,Matrix for test
-//        Log.v(TAG, "onCalculateRectF -> " + input + " currentValue -> " + currentValue);
-
                 float width = currentValue * input.width() / 2;
                 float height = currentValue * input.height() / 2;
                 float centerX = input.centerX();
@@ -1588,27 +1835,55 @@ public class GraffitiView extends ViewGroup {
                 return out;
             }
         }
+
+        /**
+         * Demo impl
+         */
+        public static class FrameAnimator extends AbstractBaseAnimator {
+
+            public FrameAnimator(GraffitiData.GraffitiLayerData layerData, Runnable updateViewRunnable, long duration) {
+                super(layerData, updateViewRunnable, duration, 0.0f, 1.0f);
+            }
+
+            @Override
+            protected void onConfigAnimator(ObjectAnimator animator) {
+                super.onConfigAnimator(animator);
+
+                //config default animator
+                animator.setInterpolator(new LinearInterpolator());
+                animator.setRepeatMode(ValueAnimator.RESTART);
+            }
+
+            @Override
+            protected RectF onCalculateRectF(RectF input, RectF out, float currentValue) {
+                //This is a
+                return input;
+            }
+
+            @Override
+            protected long onCalculateBitmapTimeLine(long duration, float currentValue) {
+                return (long) (duration * currentValue);
+            }
+        }
     }
 
     /**
-     * Manage bitmaps for {@link GraffitiView} {@link GraffitiData}.
+     * Manage bitmaps for {@link GraffitiView} {@link GraffitiLayerView}, managed by {@link GraffitiData} {@link GraffitiData.GraffitiLayerData}
      * <p>
-     * We use this class to fetch bitmaps of our urls.
+     * We use this class to get bitmaps of our layers.
      */
     public interface IBitmapProvider {
 
-
         /**
-         * Load bitmap
+         * Getting bitmap
          *
-         * @param url
-         * @return
+         * @param id id of this layer. See {@link GraffitiData.GraffitiLayerData#getNoteBitmapId()}
+         * @return Bitmap if only one bitmap; Bitmap[] if FrameAnimation like bitmaps
          */
-        Bitmap getBitmap(final String url);
-
+        Object getBitmap(String id);
 
         /**
-         * Have we download all bitmaps
+         * Have we all bitmaps ready or not.
          *
          * @return
          */

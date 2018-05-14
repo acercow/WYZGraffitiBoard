@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -22,8 +21,6 @@ import com.sina.weibo.view.graffitiview.SimpleGraffitiBitmapProvider;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.io.File;
 
 public class GraffitiViewActivity extends Activity implements View.OnClickListener {
 
@@ -65,25 +62,6 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
             });
         }
 
-        @Override
-        public Bitmap loadCache(String url) {
-            Bitmap bitmap = ImageLoader.getInstance().getMemoryCache().get(url);
-            if (bitmap != null && !bitmap.isRecycled()) {
-                return bitmap;
-            }
-
-            File f = ImageLoader.getInstance().getDiskCache().get(url);
-            if (f != null && f.exists()) {
-                bitmap = BitmapFactory.decodeFile(f.getPath());
-                if (bitmap != null) {
-                    ImageLoader.getInstance().getMemoryCache().put(url, bitmap);
-                }
-                return bitmap;
-            }
-
-            return null;
-        }
-
     };
 
     static final String KEY_GRAFFITI_BEAN = "key_graffiti_bean";
@@ -112,7 +90,7 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
             @Override
             public void onComplete(Throwable e) {
                 Log.e(TAG, "onComplete e -> " + e);
-                Toast.makeText(GraffitiViewActivity.this, "Ready to show", Toast.LENGTH_SHORT).show();
+                Toast.makeText(GraffitiViewActivity.this, "Ready to showLayers", Toast.LENGTH_SHORT).show();
             }
         }, false);
 
@@ -122,7 +100,7 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
             GraffitiBean graffitiBean = (GraffitiBean) getIntent().getSerializableExtra(KEY_GRAFFITI_BEAN);
             graffitiData = new GraffitiView.GraffitiData(SimpleGraffitiBitmapProvider.getInstance(mDownloader), graffitiBean);
         } else {
-            graffitiData = new GraffitiView.GraffitiData(SimpleGraffitiBitmapProvider.getInstance(mDownloader), 0);
+            graffitiData = new GraffitiView.GraffitiData(SimpleGraffitiBitmapProvider.getInstance(mDownloader), 0, false);
         }
 
         //select a bean
@@ -130,7 +108,7 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
         mGraffitiView.setCallbacks(new GraffitiView.ICallback() {
             @Override
             public void onDataChanged(GraffitiView graffitiView, GraffitiBean.GraffitiLayerBean drawingObject) {
-                Log.e(TAG, "onDataChanged -> " + graffitiView.getGraffitiData().getCurrentTotalNote());
+                Log.e(TAG, "onDataChanged -> " + graffitiView.getGraffitiData().getCurrentNoteTotalNumber());
             }
 
             @Override
@@ -147,7 +125,27 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
             scaleAnimation.setRepeatCount(1);
             scaleAnimation.setRepeatMode(Animation.REVERSE);
             scaleAnimation.setDuration(1000);
+            scaleAnimation.setAnimationListener(new Animation.AnimationListener() {
+                @Override
+                public void onAnimationStart(Animation animation) {
+
+                }
+
+                @Override
+                public void onAnimationEnd(Animation animation) {
+                    //start animations
+
+                }
+
+                @Override
+                public void onAnimationRepeat(Animation animation) {
+                    mGraffitiView.getGraffitiData().startAnimationsIfExits();
+                }
+            });
+
             mGraffitiView.startAnimation(scaleAnimation);
+
+
         }
     }
 
@@ -172,7 +170,6 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
                     mGraffitiView.notifyDataChanged();
                     break;
             }
-
         } catch (JSONException e) {
             e.printStackTrace();
         }
