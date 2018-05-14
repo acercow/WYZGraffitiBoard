@@ -133,7 +133,7 @@ public class GraffitiBean implements Serializable {
         @SerializedName("url")
         private String mNoteDrawableRes;
 
-        private transient final static int mAnimation = 1;
+        private transient final static int mAnimation = 5;
 
         private transient final static int mAnimationDuration = 1000;
 
@@ -184,12 +184,16 @@ public class GraffitiBean implements Serializable {
             return mReferenceNoteDistance;
         }
 
-        public String getNoteDrawableRes() {
+        private String getNoteDrawableRes() {
             if (mNoteDrawableRes == null) {
                 int p = (int) (System.currentTimeMillis() % 2);
                 mNoteDrawableRes = mTestUrls.get(p);
             }
             return mNoteDrawableRes;
+        }
+
+        public String getNoteBitmapId() {
+            return getNoteDrawableRes();
         }
 
         public List<GraffitiNoteBean> getNotes() {

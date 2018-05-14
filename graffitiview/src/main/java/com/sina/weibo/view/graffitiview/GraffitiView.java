@@ -295,7 +295,7 @@ public class GraffitiView extends ViewGroup {
             return false;
         }
 
-        if (!mGraffitiData.isBitmapReady(getCurrentDrawObject().getNoteDrawableRes())) {
+        if (!mGraffitiData.isBitmapReady(getCurrentDrawObject().getNoteBitmapId())) {
             Log.e(TAG, "GraffitiLayerBean's resources is not ready, can not draw.");
             mInternalCallback.onMessage(ICallback.MSG_BITMAP_NOT_READY);
             return false;
@@ -441,6 +441,10 @@ public class GraffitiView extends ViewGroup {
      * @return
      */
     protected GraffitiBean.GraffitiLayerBean getCurrentDrawObject() {
+        if (mDrawObject != null) {
+            return mDrawObject;
+        }
+        //DEBUG
         return GraffitiBean.GraffitiLayerBean.buildTest();
     }
 
@@ -1162,7 +1166,7 @@ public class GraffitiView extends ViewGroup {
             }
 
             public String getNoteBitmapId() {
-                return mLayerBean.getNoteDrawableRes();
+                return mLayerBean.getNoteBitmapId();
             }
 
             /**
