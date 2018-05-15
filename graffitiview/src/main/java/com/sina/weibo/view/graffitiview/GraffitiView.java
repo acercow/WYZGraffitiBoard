@@ -15,10 +15,12 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.LinearInterpolator;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Created by fishyu on 2018/4/28.
@@ -1524,7 +1526,7 @@ public class GraffitiView extends ViewGroup {
                  * @return
                  */
                 public Matrix getCalculateMatrix() {
-                    return mAnimator == null ? null : mAnimator.getAnimateMatrix(mMatrix, getCalculateBitmap(), getCalculateRectF());
+                    return mAnimator == null ? null : mAnimator.getAnimateMatrix(mMatrix, getCalculateRectF(), getCalculateBitmap());
                 }
 
                 @Override
@@ -1709,6 +1711,8 @@ public class GraffitiView extends ViewGroup {
                     return new ScaleAnimator(data, updateViewRunnable, data.getAnimationDuration(), 1.0f, 0.5f);
                 case FRAME:
                     return new FrameAnimator(data, updateViewRunnable, data.getAnimationDuration());
+                case ROTATE:
+                    return new TrembleAnimator(data, updateViewRunnable, data.getAnimationDuration());
             }
             return new ScaleAnimator(data, updateViewRunnable, data.getAnimationDuration(), 1.0f, 0.5f);
         }
@@ -1785,7 +1789,7 @@ public class GraffitiView extends ViewGroup {
 
             private float mCurrentValue;
 
-            private static final long ANIMATION_FRAME_TIME = 1000 / 45;
+            private static final long ANIMATION_FRAME_TIME = 1000 / 60;
 
             private long mLastUpdateTime = 0;
             private float mFrom;
@@ -1894,7 +1898,7 @@ public class GraffitiView extends ViewGroup {
              * @param rectF
              * @return
              */
-            public final Matrix getAnimateMatrix(Matrix output, Bitmap bitmap, RectF rectF) {
+            public final Matrix getAnimateMatrix(Matrix output, RectF rectF, Bitmap bitmap) {
                 if (output == null) {
                     output = MATRIX;
                 }
@@ -2025,6 +2029,49 @@ public class GraffitiView extends ViewGroup {
             @Override
             protected long onCalculateBitmapTimeLine(long duration, float currentValue) {
                 return (long) (duration * currentValue);
+            }
+        }
+
+        /**
+         * Demo impl
+         */
+        public static class TrembleAnimator extends GraffitiAnimator {
+
+            public TrembleAnimator(GraffitiData.GraffitiLayerData layerData, Runnable updateViewRunnable, long duration) {
+                super(layerData, updateViewRunnable, duration, 0.0f, 1.0f);
+            }
+
+            @Override
+            protected void onConfigAnimator(ObjectAnimator animator) {
+                super.onConfigAnimator(animator);
+
+                //config default animator
+                animator.setInterpolator(new LinearInterpolator());
+                animator.setRepeatMode(ValueAnimator.REVERSE);
+            }
+
+            @Override
+            protected RectF onCalculateRectF(RectF input, RectF out, float currentValue) {
+                //This is a
+                return input;
+            }
+
+
+            @Override
+            protected Matrix onCalculateMatrix(Matrix output, Bitmap bitmap, RectF rectF, float currentValue) {
+                float scale = rectF.width() / bitmap.getWidth();
+
+                output.reset();
+                output.setScale(scale, scale);
+                output.postRotate(6 * currentValue, rectF.width() / 2F, rectF.height() / 2F);
+                output.postTranslate(rectF.left, rectF.top);
+
+                return output;
+            }
+
+            @Override
+            protected long onCalculateBitmapTimeLine(long duration, float currentValue) {
+                return 41;
             }
         }
     }

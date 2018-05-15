@@ -155,9 +155,9 @@ public class GraffitiBean implements Serializable {
         @SerializedName("url")
         private String mNoteDrawableRes;
 
-        private transient final static int mAnimation = 5;
+        private transient final static int mAnimation = 4;
 
-        private transient final static int mAnimationDuration = 1000;
+        private transient final static int mAnimationDuration = 80;
 
         @SerializedName("points")
         private List<GraffitiNoteBean> mNotes;

@@ -5,9 +5,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
+import android.view.animation.AnimationSet;
+import android.view.animation.DecelerateInterpolator;
 import android.view.animation.ScaleAnimation;
 import android.widget.Toast;
 
@@ -101,7 +106,7 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
             GraffitiBean graffitiBean = GraffitiBean.fromJson(string);
             graffitiData = new GraffitiView.GraffitiData(SimpleGraffitiBitmapProvider.getInstance(mDownloader), graffitiBean);
         } else {
-            graffitiData = new GraffitiView.GraffitiData(SimpleGraffitiBitmapProvider.getInstance(mDownloader), 0, false);
+            graffitiData = new GraffitiView.GraffitiData(SimpleGraffitiBitmapProvider.getInstance(mDownloader), 0, true);
         }
 
         //select a bean
@@ -126,11 +131,25 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
         mGraffitiView.setEnabled(true);
 
         if (graffitiData.isReadMode()) {
-            ScaleAnimation scaleAnimation = new ScaleAnimation(1.0f, 0.5f, 1.0f, 0.5f, ScaleAnimation.RELATIVE_TO_SELF, 0.5f, ScaleAnimation.RELATIVE_TO_SELF, 0.5f);
-            scaleAnimation.setRepeatCount(1);
-            scaleAnimation.setRepeatMode(Animation.REVERSE);
-            scaleAnimation.setDuration(1000);
-            scaleAnimation.setAnimationListener(new Animation.AnimationListener() {
+
+            AnimationSet animationSet = new AnimationSet(true);
+
+            ScaleAnimation scaleAnimation = new ScaleAnimation(0.8f, 1.0f, 0.8f, 1f, ScaleAnimation.RELATIVE_TO_SELF, 0.5f, ScaleAnimation.RELATIVE_TO_SELF, 1f);
+            scaleAnimation.setDuration(1500);
+            scaleAnimation.setInterpolator(new DecelerateInterpolator());
+
+            AlphaAnimation fadeInAnimation = new AlphaAnimation(0F, 1F);
+            fadeInAnimation.setDuration(1500);
+            fadeInAnimation.setFillAfter(true);
+
+            AlphaAnimation fadeOutAnimation = new AlphaAnimation(1F, 0F);
+            fadeOutAnimation.setDuration(500);
+            fadeOutAnimation.setFillAfter(true);
+            fadeOutAnimation.setStartOffset(2500);
+
+            Animation trembleAnimation = new AlphaAnimation(1F, 1F);
+            trembleAnimation.setDuration(1100);
+            trembleAnimation.setAnimationListener(new Animation.AnimationListener() {
                 @Override
                 public void onAnimationStart(Animation animation) {
 
@@ -138,18 +157,38 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
 
                 @Override
                 public void onAnimationEnd(Animation animation) {
-                    //start animations
-
+                    mGraffitiView.getGraffitiData().startAnimationsIfExits();
                 }
 
                 @Override
                 public void onAnimationRepeat(Animation animation) {
-                    mGraffitiView.getGraffitiData().startAnimationsIfExits();
+
                 }
             });
 
-            mGraffitiView.startAnimation(scaleAnimation);
+            animationSet.addAnimation(scaleAnimation);
+            animationSet.addAnimation(fadeInAnimation);
+            animationSet.addAnimation(fadeOutAnimation);
+            animationSet.addAnimation(trembleAnimation);
 
+
+            animationSet.setAnimationListener(new Animation.AnimationListener() {
+                @Override
+                public void onAnimationStart(Animation animation) {
+                    mGraffitiView.setVisibility(View.VISIBLE);
+                }
+
+                @Override
+                public void onAnimationEnd(Animation animation) {
+                    mGraffitiView.setVisibility(View.INVISIBLE);
+                }
+
+                @Override
+                public void onAnimationRepeat(Animation animation) {
+
+                }
+            });
+            mGraffitiView.startAnimation(animationSet);
 
         }
     }
