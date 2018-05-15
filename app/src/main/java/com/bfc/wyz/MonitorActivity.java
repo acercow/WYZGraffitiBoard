@@ -6,8 +6,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.widget.EditText;
 
-import com.sina.weibo.view.graffitiview.GraffitiBean;
-
 /**
  * Created by fishyu on 2018/5/4.
  */
@@ -41,6 +39,6 @@ public class MonitorActivity extends Activity {
     public void onBackPressed() {
         super.onBackPressed();
         String value = mEditText.getText().toString();
-        GraffitiViewActivity.jumpToThis(this, GraffitiBean.fromJson(value));
+        GraffitiViewActivity.jumpToThis(this, value);
     }
 }
