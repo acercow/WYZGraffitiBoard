@@ -14,6 +14,7 @@ import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
 import com.nostra13.universalimageloader.core.assist.FailReason;
 import com.nostra13.universalimageloader.core.listener.ImageLoadingListener;
 import com.sina.weibo.view.graffitiview.GraffitiBean;
+import com.sina.weibo.view.graffitiview.GraffitiUtils;
 import com.sina.weibo.view.graffitiview.GraffitiView;
 import com.sina.weibo.view.graffitiview.SimpleGraffitiBitmapProvider;
 
@@ -124,7 +125,7 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
         mGraffitiView.setEnabled(true);
 
         if (graffitiData.isReadMode()) {
-            GraffitiUtils.startGraffitAnim(mGraffitiView);
+            GraffitiUtils.startGraffitiAnim(mGraffitiView);
         }
     }
 

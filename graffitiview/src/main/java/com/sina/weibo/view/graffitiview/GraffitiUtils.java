@@ -1,4 +1,4 @@
-package com.bfc.wyz;
+package com.sina.weibo.view.graffitiview;
 
 import android.view.View;
 import android.view.animation.AlphaAnimation;
@@ -16,7 +16,7 @@ import com.sina.weibo.view.graffitiview.GraffitiView;
 public class GraffitiUtils {
 
 
-    public static void startGraffitAnim(final GraffitiView graffitiView) {
+    public static void startGraffitiAnim(final GraffitiView graffitiView) {
 
         AnimationSet animationSet = new AnimationSet(true);
 
