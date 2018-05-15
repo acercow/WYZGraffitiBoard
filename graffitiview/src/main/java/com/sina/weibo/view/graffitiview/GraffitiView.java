@@ -42,7 +42,7 @@ import java.util.List;
  * 3, PIXEL 本地坐标，所有本机器的的坐标为含有 PIXEL 字段，如 {@link GraffitiBean.GraffitiLayerBean}<br>
  */
 public class GraffitiView extends ViewGroup {
-    static final String TAG = GraffitiView.class.getSimpleName();
+    private static final String TAG = GraffitiView.class.getSimpleName();
 
     private INextNoteCalculator mNoteCalculator;
 
@@ -96,7 +96,7 @@ public class GraffitiView extends ViewGroup {
         }
     }
 
-    private ICallback mInternalCallback = new InternalCallback();
+    private final InternalCallback mInternalCallback = new InternalCallback();
 
     private ShowLayersTask mShowLayersTask;
 
@@ -191,6 +191,12 @@ public class GraffitiView extends ViewGroup {
         }
     }
 
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        mInternalCallback.removeCallbacksAndMessages(null);
+    }
+
     /**
      * Input -> Data --notifyDataChanged()--> View
      */
@@ -235,7 +241,7 @@ public class GraffitiView extends ViewGroup {
     /**
      * Whether we can write or not.
      *
-     * @return
+     * @return true if we can
      */
     protected boolean checkWritable() {
         //check any time
@@ -268,7 +274,7 @@ public class GraffitiView extends ViewGroup {
     /**
      * Whether we can write or not.
      *
-     * @return
+     * @return true if we can
      */
     protected boolean checkWritableActionDown() {
         if (mGraffitiData.isReadMode()) {
@@ -337,7 +343,7 @@ public class GraffitiView extends ViewGroup {
             notifyDataChanged();
         }
 
-        private final void retry() {
+        private void retry() {
             if (retryCount > 0) {
                 removeCallbacks(this);
                 postDelayed(this, DELAY);
@@ -411,7 +417,8 @@ public class GraffitiView extends ViewGroup {
     /**
      * Notify data changed, time to update view
      *
-     * @param layerData
+     * @param layerData      the {@link GraffitiData} u want to notify
+     * @param notifyListener notify listeners or not
      */
     public void notifyDataChanged(GraffitiData.GraffitiLayerData layerData, boolean notifyListener) {
         boolean deleted = !mGraffitiData.getLayers().contains(layerData);
@@ -438,7 +445,7 @@ public class GraffitiView extends ViewGroup {
     /**
      * Returning selected {@link GraffitiBean.GraffitiLayerBean}
      *
-     * @return
+     * @return The object({@link GraffitiBean.GraffitiLayerBean}) we use to write.
      */
     protected GraffitiBean.GraffitiLayerBean getCurrentDrawObject() {
         if (mDrawObject != null) {
@@ -451,7 +458,7 @@ public class GraffitiView extends ViewGroup {
     /**
      * Setting {@link GraffitiBean.GraffitiLayerBean}, with witch to draw.
      *
-     * @param layerBean
+     * @param layerBean The object({@link GraffitiBean.GraffitiLayerBean}) we use to write.
      */
     public void setDrawObject(GraffitiBean.GraffitiLayerBean layerBean) {
         if (layerBean != mDrawObject) {
@@ -463,7 +470,7 @@ public class GraffitiView extends ViewGroup {
     /**
      * Getting internal {@link GraffitiData} witch drives {@link GraffitiView}.
      *
-     * @return
+     * @return Passed by {@link #installData(GraffitiData)}
      */
     public GraffitiData getGraffitiData() {
         return mGraffitiData;
@@ -472,7 +479,7 @@ public class GraffitiView extends ViewGroup {
     /**
      * Setting {@link ICallback}
      *
-     * @param callback
+     * @param callback listener
      */
     public void setCallbacks(ICallback callback) {
         mCallback = callback;
@@ -523,7 +530,7 @@ public class GraffitiView extends ViewGroup {
          * <p>
          * See {@link #MSG_BITMAP_NOT_READY} ...
          *
-         * @param msg
+         * @param msg see above
          */
         void onMessage(int msg);
     }
@@ -651,7 +658,7 @@ public class GraffitiView extends ViewGroup {
     }
 
 
-    /* ########################################## Datas ########################################### */
+    /* ########################################## Data ########################################### */
 
     /**
      * Data of Data-Drive-Mode.
@@ -679,7 +686,7 @@ public class GraffitiView extends ViewGroup {
         /**
          * Layers of GraffitiView
          */
-        private List<GraffitiLayerData> mLayers = new ArrayList<>();
+        private final List<GraffitiLayerData> mLayers = new ArrayList<>();
 
         /**
          * ReadMode's source
@@ -702,7 +709,7 @@ public class GraffitiView extends ViewGroup {
         private ICoordinateConverter mReferenceCoordinateConverter;
 
         /**
-         * Used for calculating device/bean infos.
+         * Used for calculating device/bean information.
          */
         private ICoordinateConverter mDeviceCoordinateConverter;
 
@@ -930,8 +937,7 @@ public class GraffitiView extends ViewGroup {
          */
         public GraffitiLayerData getLastLayer() {
             if (mLayers != null && mLayers.size() > 0) {
-                GraffitiLayerData last = mLayers.get(mLayers.size() - 1);
-                return last;
+                return mLayers.get(mLayers.size() - 1);
             }
             return null;
         }
@@ -999,7 +1005,7 @@ public class GraffitiView extends ViewGroup {
          *
          * @return
          */
-        public List getLayerNoteBitmapIds() {
+        public List<String> getLayerNoteBitmapIds() {
             if (mLayers != null && mLayers.size() > 0) {
                 List<String> list = new ArrayList<>();
                 for (GraffitiLayerData layerData : mLayers) {
@@ -1060,11 +1066,11 @@ public class GraffitiView extends ViewGroup {
 
             private float mNoteDistance;
 
-            private List<GraffitiNoteData> mNotes = new ArrayList<>();
+            private final List<GraffitiNoteData> mNotes = new ArrayList<>();
 
             public static final int MASK_REDRAW = 0x00000011;
 
-            public static final int FLAG_REDRAW_ALL = 0x1 << 0;
+            public static final int FLAG_REDRAW_ALL = 0x1;
             public static final int FLAG_REDRAW_ONCE = 0x1 << 1;
 
             private int mFlag = 0;
@@ -1309,7 +1315,7 @@ public class GraffitiView extends ViewGroup {
              */
             @Deprecated
             public boolean isForceDrawAll() {
-                return (mFlag & FLAG_REDRAW_ALL) == 1;
+                return (mFlag & FLAG_REDRAW_ALL) > 0;
             }
 
             /**
@@ -1317,7 +1323,7 @@ public class GraffitiView extends ViewGroup {
              */
             @Deprecated
             public void finishForceDrawAll(boolean forceFinish) {
-                if ((mFlag & FLAG_REDRAW_ONCE) == 1 || forceFinish) {
+                if ((mFlag & FLAG_REDRAW_ONCE) > 0 || forceFinish) {
                     setFlag(MASK_REDRAW, ~FLAG_REDRAW_ALL | ~FLAG_REDRAW_ONCE);
                 }
             }
@@ -1374,8 +1380,8 @@ public class GraffitiView extends ViewGroup {
                  */
                 public boolean mDrawn;
 
-                private RectF mOriginalRectF;
-                private RectF mCalculateRectF;
+                private final RectF mOriginalRectF;
+                private final RectF mCalculateRectF;
 
                 public GraffitiNoteData(float centerX, float centerY) {
                     mOriginalRectF = new RectF(
@@ -1475,7 +1481,7 @@ public class GraffitiView extends ViewGroup {
 
         static final String TAG = SimpleNextNoteCalculator.class.getSimpleName();
 
-        private List<GraffitiData.GraffitiLayerData.GraffitiNoteData> mPool = new ArrayList<>();
+        private final List<GraffitiData.GraffitiLayerData.GraffitiNoteData> mPool = new ArrayList<>();
 
         public SimpleNextNoteCalculator() {
 
@@ -1634,7 +1640,7 @@ public class GraffitiView extends ViewGroup {
              */
             private static final class InternalAlignClock extends Handler {
 
-                private List<Runnable> mRunnables = new ArrayList<>();
+                private final List<Runnable> mRunnableList = new ArrayList<>();
 
 
                 private boolean mRunning = false;
@@ -1643,7 +1649,7 @@ public class GraffitiView extends ViewGroup {
                 public void handleMessage(Message msg) {
                     super.handleMessage(msg);
 
-                    int size = mRunnables.size();
+                    int size = mRunnableList.size();
 
                     if (size <= 0) {
                         mRunning = false;
@@ -1652,7 +1658,7 @@ public class GraffitiView extends ViewGroup {
 
                     mRunning = true;
                     for (int i = 0; i < size; i++) {
-                        Runnable runnable = mRunnables.get(i);
+                        Runnable runnable = mRunnableList.get(i);
                         runnable.run();
                     }
 
@@ -1664,8 +1670,8 @@ public class GraffitiView extends ViewGroup {
                 }
 
                 public void start(Runnable runnable) {
-                    if (!mRunnables.contains(runnable)) {
-                        mRunnables.add(runnable);
+                    if (!mRunnableList.contains(runnable)) {
+                        mRunnableList.add(runnable);
                     }
                     if (!mRunning) {
                         heartBeat(false);
@@ -1673,17 +1679,17 @@ public class GraffitiView extends ViewGroup {
                 }
 
                 public void stop(Runnable runnable) {
-                    mRunnables.remove(runnable);
+                    mRunnableList.remove(runnable);
                 }
             }
 
             protected final String TAG = getClass().getSimpleName();
 
-            protected Runnable mUpdateViewRunnable;
+            private Runnable mUpdateViewRunnable;
 
             static final boolean ENABLE_ALIGN_CLOCK = false;
 
-            static InternalAlignClock mAlignClock = ENABLE_ALIGN_CLOCK ? new InternalAlignClock() : null;
+            static final InternalAlignClock mAlignClock = ENABLE_ALIGN_CLOCK ? new InternalAlignClock() : null;
 
             private final ObjectAnimator mAnimator;
 

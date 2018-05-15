@@ -25,7 +25,7 @@ import java.util.Map;
 
 public class SimpleGraffitiBitmapProvider implements GraffitiView.IBitmapProvider {
 
-    public static final String TAG = SimpleGraffitiBitmapProvider.class.getSimpleName();
+    private static final String TAG = SimpleGraffitiBitmapProvider.class.getSimpleName();
 
     /**
      * Bitmap downloader
@@ -76,7 +76,7 @@ public class SimpleGraffitiBitmapProvider implements GraffitiView.IBitmapProvide
     }
 
 
-    private Map<String, Bitmap> mCaches = new HashMap<>();
+    private final Map<String, Bitmap> mCaches = new HashMap<>();
 
     /**
      * Download urls listener.
@@ -89,7 +89,7 @@ public class SimpleGraffitiBitmapProvider implements GraffitiView.IBitmapProvide
 
         List<IBitmapDownloader.IBitmapDownloadListener> mListeners = new ArrayList<>();
 
-        List<String> mUrls;
+        final List<String> mUrls;
         int mCompleteCounter;
 
         GraffitiView.IBitmapProvider mBitmapManager;
@@ -142,7 +142,8 @@ public class SimpleGraffitiBitmapProvider implements GraffitiView.IBitmapProvide
                     StringBuilder stringBuilder = new StringBuilder();
                     stringBuilder.append("The flowing urls can not be downloaded:\n");
                     for (String value : mUrls) {
-                        stringBuilder.append(value + "\n");
+                        stringBuilder.append(value);
+                        stringBuilder.append("\n");
                     }
                     mLastException = new NetworkErrorException(stringBuilder.toString());
                 }
@@ -216,7 +217,7 @@ public class SimpleGraffitiBitmapProvider implements GraffitiView.IBitmapProvide
 
     private IBitmapDownloader mBitmapDownloader;
 
-    public SimpleGraffitiBitmapProvider(IBitmapDownloader downloader) {
+    private SimpleGraffitiBitmapProvider(IBitmapDownloader downloader) {
         if (downloader == null) {
             throw new IllegalArgumentException("IBitmapDownloader can not be null !");
         }

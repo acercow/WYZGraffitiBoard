@@ -25,7 +25,7 @@ import java.util.List;
  */
 public class GraffitiBean implements Serializable {
 
-    static Gson GSON = new Gson();
+    private static final Gson GSON = new Gson();
 
     @SerializedName("node")
     private List<GraffitiLayerBean> mLayers;
@@ -153,7 +153,6 @@ public class GraffitiBean implements Serializable {
          * Build buildFrom {@link GraffitiView.GraffitiData.GraffitiLayerData}
          *
          * @param layerData
-         * @return
          */
         public GraffitiLayerBean(GraffitiView.GraffitiData.GraffitiLayerData layerData) {
             this();
@@ -252,14 +251,14 @@ public class GraffitiBean implements Serializable {
         }
 
 
-        public static List<String> mTestUrls = new ArrayList();
+        public static final List<String> mTestUrls = new ArrayList<>();
 
         static {
             mTestUrls.add("https://alcdn.img.xiaoka.tv/20180315/25f/de5/0/25fde524fdc897b572691ea9d9375367.png");
             mTestUrls.add("https://alcdn.img.xiaoka.tv/20180315/79f/000/0/79f0009b39aae27b2a84b6936c9b2ad8.png");
         }
 
-        public static final GraffitiBean.GraffitiLayerBean buildTest() {
+        public static GraffitiBean.GraffitiLayerBean buildTest() {
             GraffitiBean.GraffitiLayerBean bean = new GraffitiBean.GraffitiLayerBean();
             int p = (int) (System.currentTimeMillis() % 2);
             bean.mNoteDrawableRes = mTestUrls.get(p);
@@ -294,7 +293,7 @@ public class GraffitiBean implements Serializable {
             /**
              * DEVICE descriptions. See {@link GraffitiView} 's doc.
              *
-             * @return
+             * @return device x
              */
             public float getDeviceX() {
                 return mDeviceX;
@@ -303,7 +302,7 @@ public class GraffitiBean implements Serializable {
             /**
              * DEVICE descriptions. See {@link GraffitiView} 's doc.
              *
-             * @return
+             * @return device y
              */
             public float getDeviceY() {
                 return mDeviceY;

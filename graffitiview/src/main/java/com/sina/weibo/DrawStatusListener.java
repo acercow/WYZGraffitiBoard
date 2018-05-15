@@ -14,7 +14,7 @@ public interface DrawStatusListener {
      * 开始绘制（未达到10个礼物）
      * 绘制基本完成（达到10个礼物）
      */
-    public enum DrawStatus {
+    enum DrawStatus {
         DEFAULT, START, FINISH
     }
 }
