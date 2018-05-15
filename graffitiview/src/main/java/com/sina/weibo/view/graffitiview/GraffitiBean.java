@@ -146,11 +146,11 @@ public class GraffitiBean implements Serializable {
         @SerializedName("gift_id")
         private String id = "123"; //礼物id
 
-        private transient final static float mReferenceNoteWidth = 38.0f;
+        private transient final static float mReferenceNoteWidth = 34.0f;
 
-        private transient final static float mReferenceNoteHeight = 38.0f;
+        private transient final static float mReferenceNoteHeight = 34.0f;
 
-        private transient final static float mReferenceNoteDistance = 36.0f;
+        private transient final static float mReferenceNoteDistance = 33.0f;
 
         @SerializedName("url")
         private String mNoteDrawableRes;
