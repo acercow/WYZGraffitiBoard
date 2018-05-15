@@ -6,6 +6,7 @@ import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.os.Handler;
 import android.os.Message;
@@ -607,13 +608,13 @@ public class GraffitiView extends ViewGroup {
             }
 
             int size = getLayerData().getNotes().size();
-            for (int i = size - 1; i >= 0; i--) {
+            for (int i = 0; i < size; i++) {
                 GraffitiData.GraffitiLayerData.GraffitiNoteData note = getLayerData().getNotes().get(i);
                 note.mDrawn = false;
                 if (note.mDrawn && !getLayerData().isForceDrawAll()) {
                     break;
                 }
-                drawNote(canvas, note, bitmap);
+                drawNote(canvas, note);
                 note.mDrawn = true;
             }
 
@@ -627,10 +628,9 @@ public class GraffitiView extends ViewGroup {
          * @param canvas
          * @param note   Note information
          */
-        protected void drawNote(Canvas canvas, GraffitiData.GraffitiLayerData.GraffitiNoteData note, Bitmap bitmap) {
-            onDrawNote(canvas, note, bitmap, note.getCalculateRectF());
+        protected void drawNote(Canvas canvas, GraffitiData.GraffitiLayerData.GraffitiNoteData note) {
+            onDrawNote(canvas, note, note.getCalculateBitmap(), note.getCalculateRectF(), note.getCalculateMatrix());
         }
-
 
         /**
          * Do what u want to draw your note
@@ -640,8 +640,13 @@ public class GraffitiView extends ViewGroup {
          * @param bitmap
          * @param rectF
          */
-        protected void onDrawNote(Canvas canvas, GraffitiData.GraffitiLayerData.GraffitiNoteData note, Bitmap bitmap, RectF rectF) {
-            canvas.drawBitmap(bitmap, null, rectF, null);
+        protected void onDrawNote(Canvas canvas, GraffitiData.GraffitiLayerData.GraffitiNoteData note, Bitmap bitmap, RectF rectF, Matrix matrix) {
+            if (matrix != null) {
+                canvas.drawBitmap(bitmap, matrix, null);
+            } else {
+                //draw rect
+                canvas.drawBitmap(bitmap, null, rectF, null);
+            }
         }
 
     }
@@ -1061,10 +1066,12 @@ public class GraffitiView extends ViewGroup {
 
             private int mFlag = 0;
 
-            private AnimatorFactory.AbstractBaseAnimator mAnimator; // 是否有动画
+            private AnimatorFactory.GraffitiAnimator mAnimator; // 是否有动画
 
             private Bitmap mBitmap;
             private Bitmap[] mBitmaps;
+
+            private final Matrix mMatrix = new Matrix();
 
             public GraffitiLayerData(GraffitiBean.GraffitiLayerBean layerBean) {
                 if (mReferenceCoordinateConverter == null) {
@@ -1388,6 +1395,17 @@ public class GraffitiView extends ViewGroup {
                 }
 
                 /**
+                 * Getting the animated Bitmap
+                 * <p>
+                 * Same as {@link GraffitiLayerData#getCalculateBitmap()} currently.
+                 *
+                 * @return
+                 */
+                public Bitmap getCalculateBitmap() {
+                    return GraffitiLayerData.this.getCalculateBitmap();
+                }
+
+                /**
                  * Get the animated RectF
                  *
                  * @return
@@ -1403,6 +1421,15 @@ public class GraffitiView extends ViewGroup {
                  */
                 public ICoordinateConverter getCoordinateConverter() {
                     return mDeviceCoordinateConverter;
+                }
+
+                /**
+                 * Getting the animated Matrix
+                 *
+                 * @return
+                 */
+                public Matrix getCalculateMatrix() {
+                    return mAnimator == null ? null : mAnimator.getAnimateMatrix(mMatrix, getCalculateRectF());
                 }
 
                 @Override
@@ -1572,7 +1599,12 @@ public class GraffitiView extends ViewGroup {
         //weibo use
         public final static int SHAKE_RETATE = 6;
 
-        public static AbstractBaseAnimator create(GraffitiData.GraffitiLayerData data, Runnable updateViewRunnable) {
+        /**
+         * Reused MATRIX ?
+         */
+        static final Matrix MATRIX = new Matrix();
+
+        public static GraffitiAnimator create(GraffitiData.GraffitiLayerData data, Runnable updateViewRunnable) {
             switch (data.getGraffitiLayerBean().getAnimation()) {
                 case SCALE:
                     return new ScaleAnimator(data, updateViewRunnable, data.getAnimationDuration(), 1.0f, 0.5f);
@@ -1590,7 +1622,7 @@ public class GraffitiView extends ViewGroup {
          * 2, Size/Location animation support
          * 3, Bitmap frame support
          */
-        public static abstract class AbstractBaseAnimator implements Animator.AnimatorListener, ValueAnimator.AnimatorUpdateListener {
+        public static class GraffitiAnimator implements Animator.AnimatorListener, ValueAnimator.AnimatorUpdateListener {
 
             /**
              * Awake all updateView Runnable  at same time-line for better preference ?
@@ -1646,7 +1678,6 @@ public class GraffitiView extends ViewGroup {
 
             protected Runnable mUpdateViewRunnable;
 
-
             static final boolean ENABLE_ALIGN_CLOCK = false;
 
             static InternalAlignClock mAlignClock = ENABLE_ALIGN_CLOCK ? new InternalAlignClock() : null;
@@ -1662,7 +1693,7 @@ public class GraffitiView extends ViewGroup {
 
             private GraffitiData.GraffitiLayerData mLayerData;
 
-            public AbstractBaseAnimator(GraffitiData.GraffitiLayerData layerData, Runnable updateViewRunnable, long duration, float from, float to) {
+            public GraffitiAnimator(GraffitiData.GraffitiLayerData layerData, Runnable updateViewRunnable, long duration, float from, float to) {
                 if (layerData == null) {
                     throw new IllegalArgumentException("GraffitiLayerData must not be null !");
                 }
@@ -1673,7 +1704,7 @@ public class GraffitiView extends ViewGroup {
                 mUpdateViewRunnable = updateViewRunnable;
                 mFrom = from;
 
-                ObjectAnimator animator = ObjectAnimator.ofFloat(AbstractBaseAnimator.this, "value", from, to);
+                ObjectAnimator animator = ObjectAnimator.ofFloat(GraffitiAnimator.this, "value", from, to);
                 animator.setDuration(duration);
                 animator.addListener(this);
                 animator.addUpdateListener(this);
@@ -1731,8 +1762,9 @@ public class GraffitiView extends ViewGroup {
              * @param currentValue
              * @return target
              */
-            protected abstract RectF onCalculateRectF(RectF input, RectF out, float currentValue);
-
+            protected RectF onCalculateRectF(RectF input, RectF out, float currentValue) {
+                return input;
+            }
 
             /**
              * Calculate animated Bitmap
@@ -1752,6 +1784,32 @@ public class GraffitiView extends ViewGroup {
              */
             protected long onCalculateBitmapTimeLine(long duration, float currentValue) {
                 return -1;
+            }
+
+
+            /**
+             * Calculate animated Matrix
+             *
+             * @param output
+             * @param rectF
+             * @return
+             */
+            public final Matrix getAnimateMatrix(Matrix output, RectF rectF) {
+                if (output == null) {
+                    output = MATRIX;
+                }
+                return onCalculateMatrix(output, rectF);
+            }
+
+            /**
+             * On calculating target Matrix
+             *
+             * @param output
+             * @param rectF
+             * @return
+             */
+            protected Matrix onCalculateMatrix(Matrix output, RectF rectF) {
+                return null;
             }
 
 
@@ -1815,7 +1873,7 @@ public class GraffitiView extends ViewGroup {
         /**
          * Demo impl
          */
-        public static class ScaleAnimator extends AbstractBaseAnimator {
+        public static class ScaleAnimator extends GraffitiAnimator {
 
             public ScaleAnimator(GraffitiData.GraffitiLayerData layerData, Runnable updateViewRunnable, long duration, float from, float to) {
                 super(layerData, updateViewRunnable, duration, from, to);
@@ -1843,7 +1901,7 @@ public class GraffitiView extends ViewGroup {
         /**
          * Demo impl
          */
-        public static class FrameAnimator extends AbstractBaseAnimator {
+        public static class FrameAnimator extends GraffitiAnimator {
 
             public FrameAnimator(GraffitiData.GraffitiLayerData layerData, Runnable updateViewRunnable, long duration) {
                 super(layerData, updateViewRunnable, duration, 0.0f, 1.0f);

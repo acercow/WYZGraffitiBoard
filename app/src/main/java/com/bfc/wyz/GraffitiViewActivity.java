@@ -97,8 +97,13 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
 
         GraffitiView.GraffitiData graffitiData = null;
         if (getIntent().getSerializableExtra(KEY_GRAFFITI_BEAN) instanceof GraffitiBean) {
+
             GraffitiBean graffitiBean = (GraffitiBean) getIntent().getSerializableExtra(KEY_GRAFFITI_BEAN);
             graffitiData = new GraffitiView.GraffitiData(SimpleGraffitiBitmapProvider.getInstance(mDownloader), graffitiBean);
+
+
+
+
         } else {
             graffitiData = new GraffitiView.GraffitiData(SimpleGraffitiBitmapProvider.getInstance(mDownloader), 0, false);
         }
