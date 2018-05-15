@@ -1429,7 +1429,7 @@ public class GraffitiView extends ViewGroup {
                  * @return
                  */
                 public Matrix getCalculateMatrix() {
-                    return mAnimator == null ? null : mAnimator.getAnimateMatrix(mMatrix, getCalculateRectF());
+                    return mAnimator == null ? null : mAnimator.getAnimateMatrix(mMatrix, getCalculateBitmap(), getCalculateRectF());
                 }
 
                 @Override
@@ -1791,14 +1791,15 @@ public class GraffitiView extends ViewGroup {
              * Calculate animated Matrix
              *
              * @param output
+             * @param bitmap
              * @param rectF
              * @return
              */
-            public final Matrix getAnimateMatrix(Matrix output, RectF rectF) {
+            public final Matrix getAnimateMatrix(Matrix output, Bitmap bitmap, RectF rectF) {
                 if (output == null) {
                     output = MATRIX;
                 }
-                return onCalculateMatrix(output, rectF);
+                return onCalculateMatrix(output, bitmap, rectF, mCurrentValue);
             }
 
             /**
@@ -1808,7 +1809,7 @@ public class GraffitiView extends ViewGroup {
              * @param rectF
              * @return
              */
-            protected Matrix onCalculateMatrix(Matrix output, RectF rectF) {
+            protected Matrix onCalculateMatrix(Matrix output, Bitmap bitmap, RectF rectF, float currentValue) {
                 return null;
             }
 
