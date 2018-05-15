@@ -24,7 +24,7 @@ import org.json.JSONObject;
 
 public class GraffitiViewActivity extends Activity implements View.OnClickListener {
 
-    static final String TAG = "ViewActivity";
+    static final String TAG = GraffitiViewActivity.class.getSimpleName();
 
     private GraffitiView mGraffitiView;
 
@@ -90,7 +90,7 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
             @Override
             public void onComplete(Throwable e) {
                 Log.e(TAG, "onComplete e -> " + e);
-                Toast.makeText(GraffitiViewActivity.this, "Ready to showLayers", Toast.LENGTH_SHORT).show();
+                Toast.makeText(GraffitiViewActivity.this, "Ready to showLayers? e -> " + e, Toast.LENGTH_SHORT).show();
             }
         }, false);
 
@@ -114,7 +114,11 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
 
             @Override
             public void onMessage(int msg) {
-
+                switch (msg) {
+                    case GraffitiView.ICallback.MSG_GRAFFITI_DATA_VIEW_INSTALLED:
+                        Log.e(TAG, " write padding -> " + mGraffitiView.getGraffitiData().getWritePaddingRectF());
+                        break;
+                }
             }
         });
 

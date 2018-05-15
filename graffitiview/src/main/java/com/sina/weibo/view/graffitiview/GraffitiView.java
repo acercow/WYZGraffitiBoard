@@ -185,6 +185,7 @@ public class GraffitiView extends ViewGroup {
                         if (mGraffitiData.isReadMode()) {
                             showLayers();
                         }
+                        mInternalCallback.onMessage(ICallback.MSG_GRAFFITI_DATA_VIEW_INSTALLED);
                     }
                 }
             }
@@ -203,16 +204,17 @@ public class GraffitiView extends ViewGroup {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         //can not write
-        if (!checkWritable()) {
+        if (!checkWritable(event)) {
             return true;
         }
 
         final float pointX = event.getX();
         final float pointY = event.getY();
+
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
-            if (checkWritableActionDown()) {
+            if (checkWritableActionDown(event)) {
                 mDrawingLayer = mGraffitiData.getDrawingLayer(getCurrentDrawObject());
-                if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, null, pointX, pointY, mGraffitiData.getNoteLeftNumber()))) {
+                if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, null, pointX, pointY, mGraffitiData.getWritePaddingRectF(), mGraffitiData.getNoteLeftNumber()))) {
                     notifyDataChanged(mDrawingLayer, true);
                 }
                 return true;
@@ -221,13 +223,13 @@ public class GraffitiView extends ViewGroup {
             // Checks for the event that occurs
             switch (event.getAction()) {
                 case MotionEvent.ACTION_MOVE:
-                    if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY, mGraffitiData.getNoteLeftNumber()))) {
+                    if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY, mGraffitiData.getWritePaddingRectF(), mGraffitiData.getNoteLeftNumber()))) {
                         notifyDataChanged(mDrawingLayer, true);
                     }
                     return true;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
-                    if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY, mGraffitiData.getNoteLeftNumber()))) {
+                    if (mDrawingLayer.addNote(mNoteCalculator.next(mDrawingLayer, mDrawingLayer.getLast(), pointX, pointY, mGraffitiData.getWritePaddingRectF(), mGraffitiData.getNoteLeftNumber()))) {
                         notifyDataChanged(mDrawingLayer, true);
                     }
                     return true;
@@ -238,12 +240,17 @@ public class GraffitiView extends ViewGroup {
         return true;
     }
 
+    @Deprecated
+    @Override
+    public void setPadding(int left, int top, int right, int bottom) {
+    }
+
     /**
      * Whether we can write or not.
      *
      * @return true if we can
      */
-    protected boolean checkWritable() {
+    protected boolean checkWritable(MotionEvent motionEvent) {
         //check any time
         if (!isEnabled()) {
             Log.e(TAG, "View has been disabled.");
@@ -276,7 +283,7 @@ public class GraffitiView extends ViewGroup {
      *
      * @return true if we can
      */
-    protected boolean checkWritableActionDown() {
+    protected boolean checkWritableActionDown(MotionEvent motionEvent) {
         if (mGraffitiData.isReadMode()) {
             Log.e(TAG, "player mode, just showLayers notes");
             mInternalCallback.onMessage(ICallback.MSG_READ_MODE);
@@ -286,6 +293,11 @@ public class GraffitiView extends ViewGroup {
         if (mGraffitiData.getNoteLeftNumber() <= 0) {
             Log.e(TAG, "Reached max note number, can not draw.");
             mInternalCallback.onMessage(ICallback.MSG_MAX_NOTE_REACHED);
+            return false;
+        }
+
+        if (!mGraffitiData.getWritePaddingRectF().contains(motionEvent.getX(), motionEvent.getY())) {
+            Log.e(TAG, "touch outside!");
             return false;
         }
 
@@ -518,6 +530,11 @@ public class GraffitiView extends ViewGroup {
         int MSG_GRAFFITI_DATA_NOT_INSTALLED = 6;
 
         /**
+         * {@link GraffitiData#installView(float, float)} been called, and {@link GraffitiData#isViewInstalled()} return true now.
+         */
+        int MSG_GRAFFITI_DATA_VIEW_INSTALLED = 7;
+
+        /**
          * @param graffitiView  GraffitiView itself
          * @param drawingObject Current drawing object set by  {@link GraffitiView#setDrawObject(GraffitiBean.GraffitiLayerBean)}.
          *                      May be null if flush change like stopAndClear or something.
@@ -713,6 +730,31 @@ public class GraffitiView extends ViewGroup {
          */
         private ICoordinateConverter mDeviceCoordinateConverter;
 
+        /**
+         * Left padding when writing
+         */
+        private float mWritePaddingLeft;
+
+        /**
+         * Left padding when writing
+         */
+        private float mWritePaddingTop;
+
+        /**
+         * Left padding when writing
+         */
+        private float mWritePaddingRight;
+
+        /**
+         * Left padding when writing
+         */
+        private float mWritePaddingBottom;
+
+        /**
+         * Padding rectF when writing
+         */
+        private RectF mWritePaddingRectF;
+
         private float mCanvasWidth;
         private float mCanvasHeight;
 
@@ -743,6 +785,9 @@ public class GraffitiView extends ViewGroup {
             mBitmapProvider = bitmapManager;
             mMaxNoteNumber = maxNote;
             mAutoStartAnimationIfExits = autoStartAnimationIfExits;
+
+            //set default writing padding
+            setDrawPadding(GraffitiBean.ReferenceWritePaddingLeft, GraffitiBean.ReferenceWritePaddingTop, GraffitiBean.ReferenceWritePaddingRight, GraffitiBean.ReferenceWritePaddingBottom);
         }
 
         /**
@@ -770,6 +815,8 @@ public class GraffitiView extends ViewGroup {
             // GraffitiNoteData can only been initialized after view installed
             installLayers();
 
+            installPaddingRectF();
+
             Log.e(TAG, "initialized...");
             return true;
         }
@@ -780,7 +827,7 @@ public class GraffitiView extends ViewGroup {
          * @return
          */
         public boolean isViewInstalled() {
-            return mReferenceCoordinateConverter != null;
+            return mReferenceCoordinateConverter != null && getWritePaddingRectF() != null;
         }
 
         /**
@@ -802,6 +849,45 @@ public class GraffitiView extends ViewGroup {
                     }
                 }
             }
+        }
+
+
+        /**
+         * Setting write padding values
+         *
+         * @param leftReference   REFERENCE value, See {@link GraffitiView} 's doc
+         * @param topReference    REFERENCE value, See {@link GraffitiView} 's doc
+         * @param rightReference  REFERENCE value, See {@link GraffitiView} 's doc
+         * @param bottomReference REFERENCE value, See {@link GraffitiView} 's doc
+         */
+        public void setDrawPadding(float leftReference, float topReference, float rightReference, float bottomReference) {
+            mWritePaddingLeft = leftReference;
+            mWritePaddingTop = topReference;
+            mWritePaddingRight = rightReference;
+            mWritePaddingBottom = bottomReference;
+            if (isViewInstalled()) {
+                installLayers();
+            }
+        }
+
+        /**
+         * install {@link #mWritePaddingRectF}
+         */
+        private void installPaddingRectF() {
+            final float left = mReferenceCoordinateConverter.convertWidthTargetToPixel(mWritePaddingLeft);
+            final float top = mReferenceCoordinateConverter.convertHeightTargetToPixel(mWritePaddingTop);
+            final float right = mReferenceCoordinateConverter.convertWidthTargetToPixel(mWritePaddingRight);
+            final float bottom = mReferenceCoordinateConverter.convertHeightTargetToPixel(mWritePaddingBottom);
+            mWritePaddingRectF = new RectF(left, top, mCanvasWidth - right, mCanvasHeight - bottom);
+        }
+
+        /**
+         * Getting current writing rectF
+         *
+         * @return
+         */
+        public RectF getWritePaddingRectF() {
+            return mWritePaddingRectF;
         }
 
         /**
@@ -1470,7 +1556,7 @@ public class GraffitiView extends ViewGroup {
          * @param relative
          * @return
          */
-        List<GraffitiData.GraffitiLayerData.GraffitiNoteData> next(GraffitiData.GraffitiLayerData layer, GraffitiData.GraffitiLayerData.GraffitiNoteData relative, float x, float y, int maxNotes);
+        List<GraffitiData.GraffitiLayerData.GraffitiNoteData> next(GraffitiData.GraffitiLayerData layer, GraffitiData.GraffitiLayerData.GraffitiNoteData relative, float x, float y, RectF writableRectF, int maxNotes);
     }
 
 
@@ -1488,7 +1574,7 @@ public class GraffitiView extends ViewGroup {
         }
 
         @Override
-        public List<GraffitiData.GraffitiLayerData.GraffitiNoteData> next(GraffitiData.GraffitiLayerData layer, GraffitiData.GraffitiLayerData.GraffitiNoteData relative, float x, float y, int maxNotes) {
+        public List<GraffitiData.GraffitiLayerData.GraffitiNoteData> next(GraffitiData.GraffitiLayerData layer, GraffitiData.GraffitiLayerData.GraffitiNoteData relative, float x, float y, RectF writableRectF, int maxNotes) {
             if (relative == null) {
                 GraffitiData.GraffitiLayerData.GraffitiNoteData note = layer.new GraffitiNoteData(x, y);
                 mPool.clear();
@@ -1505,8 +1591,12 @@ public class GraffitiView extends ViewGroup {
                     float gapX = (x - lastX) / ratio;
                     float gapY = (y - lastY) / ratio;
                     for (int i = 1; i <= ratio && i <= maxNotes; i++) {
-                        GraffitiData.GraffitiLayerData.GraffitiNoteData note = layer.new GraffitiNoteData(lastX + gapX * i, lastY + gapY * i);
-                        mPool.add(note);
+                        float centerX = lastX + gapX * i;
+                        float centerY = lastY + gapY * i;
+                        if (writableRectF.contains(centerX, centerY)) {
+                            GraffitiData.GraffitiLayerData.GraffitiNoteData note = layer.new GraffitiNoteData(centerX, centerY);
+                            mPool.add(note);
+                        }
                     }
                     return mPool;
                 }

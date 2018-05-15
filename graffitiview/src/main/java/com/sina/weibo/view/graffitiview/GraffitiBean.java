@@ -67,6 +67,28 @@ public class GraffitiBean implements Serializable {
      */
     public transient static final float ReferenceCanvasHeight = 332.0f;
 
+
+    /**
+     * Write left padding
+     */
+    public transient static final float ReferenceWritePaddingLeft = 10.0f;
+
+    /**
+     * Write top padding
+     */
+    public transient static final float ReferenceWritePaddingTop = ReferenceWritePaddingLeft;
+
+    /**
+     * Write right padding
+     */
+    public transient static final float ReferenceWritePaddingRight = ReferenceWritePaddingLeft;
+
+    /**
+     * Write bottom padding
+     */
+    public transient static final float ReferenceWritePaddingBottom = ReferenceWritePaddingLeft;
+
+
     public GraffitiBean() {
 
     }
