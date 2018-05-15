@@ -96,14 +96,10 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
 
 
         GraffitiView.GraffitiData graffitiData = null;
-        if (getIntent().getSerializableExtra(KEY_GRAFFITI_BEAN) instanceof GraffitiBean) {
-
-            GraffitiBean graffitiBean = (GraffitiBean) getIntent().getSerializableExtra(KEY_GRAFFITI_BEAN);
+        if (getIntent().getSerializableExtra(KEY_GRAFFITI_BEAN) instanceof String) {
+            String string = (String) getIntent().getSerializableExtra(KEY_GRAFFITI_BEAN);
+            GraffitiBean graffitiBean = GraffitiBean.fromJson(string);
             graffitiData = new GraffitiView.GraffitiData(SimpleGraffitiBitmapProvider.getInstance(mDownloader), graffitiBean);
-
-
-
-
         } else {
             graffitiData = new GraffitiView.GraffitiData(SimpleGraffitiBitmapProvider.getInstance(mDownloader), 0, false);
         }
@@ -167,7 +163,7 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
                     break;
 
                 case R.id.from_bean:
-                    GraffitiViewActivity.jumpToThis(this, GraffitiBean.fromJson(jsonObject.toString()));
+                    GraffitiViewActivity.jumpToThis(this, jsonObject.toString());
                     break;
 
                 case R.id.undo_last:
@@ -183,7 +179,7 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
     }
 
 
-    public static final void jumpToThis(Context context, GraffitiBean bean) {
+    public static final void jumpToThis(Context context, String bean) {
         Intent intent = new Intent(context, GraffitiViewActivity.class);
         intent.putExtra(KEY_GRAFFITI_BEAN, bean);
         context.startActivity(intent);

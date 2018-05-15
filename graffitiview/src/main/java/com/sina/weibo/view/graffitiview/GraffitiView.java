@@ -183,7 +183,6 @@ public class GraffitiView extends ViewGroup {
                 if (w >= 0 && h >= 0) {
                     if (mGraffitiData.installView(w, h)) {
                         if (mGraffitiData.isReadMode()) {
-                            mGraffitiData.installLayers();
                             showLayers();
                         }
                     }
@@ -780,16 +779,20 @@ public class GraffitiView extends ViewGroup {
         /**
          * Install layers
          */
-        public void installLayers() {
+        private void installLayers() {
             if (isReadMode()) {
+                //clear all first
+                getLayers().clear();
                 // Used for calculate note info(most is because ios used different strategy for note)
                 GraffitiLayerData layerData = null;
                 for (GraffitiBean.GraffitiLayerBean bean : mGraffitiBean.getLayers()) {
                     //try merge layers
                     if (layerData == null || !layerData.isMergeAble(bean)) {
                         layerData = new GraffitiLayerData(bean);
+                        addLayer(layerData);
+                    } else {
+                        layerData.getGraffitiLayerBean().getNotes().addAll(bean.getNotes());
                     }
-                    addLayer(layerData);
                 }
             }
         }
