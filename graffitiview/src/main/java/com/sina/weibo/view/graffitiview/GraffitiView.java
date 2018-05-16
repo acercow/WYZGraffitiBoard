@@ -15,12 +15,10 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.LinearInterpolator;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 /**
  * Created by fishyu on 2018/4/28.
@@ -272,8 +270,8 @@ public class GraffitiView extends ViewGroup {
         }
 
         if (!mGraffitiData.isViewInstalled()) {
-            Log.e(TAG, "GraffitiData is not installed");
-            mInternalCallback.onMessage(ICallback.MSG_GRAFFITI_DATA_VIEW_INSTALLED);
+            Log.e(TAG, "GraffitiData's view is not installed");
+            mInternalCallback.onMessage(ICallback.MSG_GRAFFITI_DATA_VIEW_NOT_INSTALLED);
             return false;
         }
         return true;
@@ -529,7 +527,15 @@ public class GraffitiView extends ViewGroup {
          */
         int MSG_MAX_NOTE_REACHED = 5;
 
+        /**
+         * {@link #installData(GraffitiData)} has not been called! And {@link GraffitiData} must be set.
+         */
         int MSG_GRAFFITI_DATA_NOT_INSTALLED = 6;
+
+        /**
+         * {@link GraffitiData#isViewInstalled()} is negative.
+         */
+        int MSG_GRAFFITI_DATA_VIEW_NOT_INSTALLED = 6;
 
         /**
          * {@link GraffitiData#installView(float, float)} been called, and {@link GraffitiData#isViewInstalled()} return true now.
