@@ -262,13 +262,6 @@ public class DemoGraffitiBitmapProvider implements GraffitiView.IBitmapProvider 
                     mLastException = new NetworkErrorException(stringBuilder.toString());
                 }
 
-
-                //debug
-                mLastException = new Exception("DEBUG");
-                for (String value : mUrls.keySet()) {
-                    mUrls.put(value, FAILED);
-                }
-
                 onComplete(mLastException);
             }
         }
