@@ -273,7 +273,7 @@ public class GraffitiView extends ViewGroup {
 
         if (!mGraffitiData.isViewInstalled()) {
             Log.e(TAG, "GraffitiData is not installed");
-            mInternalCallback.onMessage(ICallback.MSG_GRAFFITI_DATA_NOT_INSTALLED);
+            mInternalCallback.onMessage(ICallback.MSG_GRAFFITI_DATA_VIEW_INSTALLED);
             return false;
         }
         return true;
