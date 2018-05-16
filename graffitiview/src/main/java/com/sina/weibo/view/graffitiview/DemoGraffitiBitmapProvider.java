@@ -24,9 +24,9 @@ import java.util.Map;
  * 3,Disk cache coming soon
  */
 
-public class SimpleGraffitiBitmapProvider implements GraffitiView.IBitmapProvider {
+public class DemoGraffitiBitmapProvider implements GraffitiView.IBitmapProvider {
 
-    private static final String TAG = SimpleGraffitiBitmapProvider.class.getSimpleName();
+    private static final String TAG = DemoGraffitiBitmapProvider.class.getSimpleName();
 
     /**
      * Bitmap downloader
@@ -351,7 +351,7 @@ public class SimpleGraffitiBitmapProvider implements GraffitiView.IBitmapProvide
 
     private IBitmapDownloader mBitmapDownloader;
 
-    private SimpleGraffitiBitmapProvider(IBitmapDownloader downloader) {
+    private DemoGraffitiBitmapProvider(IBitmapDownloader downloader) {
         if (downloader == null) {
             throw new IllegalArgumentException("IBitmapDownloader can not be null !");
         }
@@ -525,11 +525,11 @@ public class SimpleGraffitiBitmapProvider implements GraffitiView.IBitmapProvide
     }
 
 
-    private static SimpleGraffitiBitmapProvider mInstance;
+    private static DemoGraffitiBitmapProvider mInstance;
 
-    public static SimpleGraffitiBitmapProvider getInstance(IBitmapDownloader downloader) {
+    public static DemoGraffitiBitmapProvider getInstance(IBitmapDownloader downloader) {
         if (mInstance == null) {
-            mInstance = new SimpleGraffitiBitmapProvider(downloader);
+            mInstance = new DemoGraffitiBitmapProvider(downloader);
         }
         return mInstance;
     }

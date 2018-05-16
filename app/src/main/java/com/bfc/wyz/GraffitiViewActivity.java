@@ -16,7 +16,7 @@ import com.nostra13.universalimageloader.core.listener.ImageLoadingListener;
 import com.sina.weibo.view.graffitiview.GraffitiBean;
 import com.sina.weibo.view.graffitiview.GraffitiUtils;
 import com.sina.weibo.view.graffitiview.GraffitiView;
-import com.sina.weibo.view.graffitiview.SimpleGraffitiBitmapProvider;
+import com.sina.weibo.view.graffitiview.DemoGraffitiBitmapProvider;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -27,9 +27,9 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
 
     private GraffitiView mGraffitiView;
 
-    static SimpleGraffitiBitmapProvider.IBitmapDownloader mDownloader = new SimpleGraffitiBitmapProvider.IBitmapDownloader() {
+    static DemoGraffitiBitmapProvider.IBitmapDownloader mDownloader = new DemoGraffitiBitmapProvider.IBitmapDownloader() {
         @Override
-        public void download(final String url, final SimpleGraffitiBitmapProvider.IBitmapDownloader.IBitmapDownloadListener listener) {
+        public void download(final String url, final DemoGraffitiBitmapProvider.IBitmapDownloader.IBitmapDownloadListener listener) {
             ImageLoader.getInstance().loadImage(url, new ImageLoadingListener() {
                 @Override
                 public void onLoadingStarted(String s, View view) {
@@ -74,8 +74,8 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
 
         ImageLoader.getInstance().init(ImageLoaderConfiguration.createDefault(getApplicationContext()));
 
-        SimpleGraffitiBitmapProvider.getInstance(mDownloader);
-        SimpleGraffitiBitmapProvider.getInstance(mDownloader).download(GraffitiBean.GraffitiLayerBean.mTestUrls, new SimpleGraffitiBitmapProvider.IBitmapDownloader.IBitmapDownloadListener() {
+        DemoGraffitiBitmapProvider.getInstance(mDownloader);
+        DemoGraffitiBitmapProvider.getInstance(mDownloader).download(GraffitiBean.GraffitiLayerBean.mTestUrls, new DemoGraffitiBitmapProvider.IBitmapDownloader.IBitmapDownloadListener() {
             @Override
             public void onStart(String url) {
                 Log.e(TAG, "onStart -> " + url);
@@ -98,9 +98,9 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
         if (getIntent().getSerializableExtra(KEY_GRAFFITI_BEAN) instanceof String) {
             String string = (String) getIntent().getSerializableExtra(KEY_GRAFFITI_BEAN);
             GraffitiBean graffitiBean = GraffitiBean.fromJson(string);
-            graffitiData = new GraffitiView.GraffitiData(SimpleGraffitiBitmapProvider.getInstance(mDownloader), graffitiBean);
+            graffitiData = new GraffitiView.GraffitiData(DemoGraffitiBitmapProvider.getInstance(mDownloader), graffitiBean);
         } else {
-            graffitiData = new GraffitiView.GraffitiData(SimpleGraffitiBitmapProvider.getInstance(mDownloader), 0, true);
+            graffitiData = new GraffitiView.GraffitiData(DemoGraffitiBitmapProvider.getInstance(mDownloader), 0, true);
         }
 
         //select a bean
