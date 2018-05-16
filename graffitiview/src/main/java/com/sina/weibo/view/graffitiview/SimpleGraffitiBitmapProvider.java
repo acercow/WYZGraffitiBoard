@@ -2,6 +2,7 @@ package com.sina.weibo.view.graffitiview;
 
 import android.accounts.NetworkErrorException;
 import android.graphics.Bitmap;
+import android.os.Handler;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -75,31 +76,140 @@ public class SimpleGraffitiBitmapProvider implements GraffitiView.IBitmapProvide
 
     }
 
-
     private final Map<String, Bitmap> mCaches = new HashMap<>();
 
     /**
      * Download urls listener.
      */
-    private class BitmapsDownloadTask implements IBitmapDownloader.IBitmapDownloadListener {
-
-        final String TAG = BitmapsDownloadTask.class.getSimpleName();
-
-        int mRetryCounter = 3;
+    private final class BitmapsDownloadTask implements IBitmapDownloader.IBitmapDownloadListener {
 
         List<IBitmapDownloader.IBitmapDownloadListener> mListeners = new ArrayList<>();
 
-        final List<String> mUrls;
-        int mCompleteCounter;
+        final InternalMap mUrls = new InternalMap();
+        RetryRobot mRetryRobot;
 
         GraffitiView.IBitmapProvider mBitmapManager;
         Exception mLastException;
 
+        final int WAITING = 1;
+        final int SUCCESS = 2;
+        final int FAILED = 3;
+
+        /**
+         * Status HashMap
+         */
+        private final class InternalMap extends HashMap<String, Integer> {
+
+            int waitingCount = 0;
+            int successCount = 0;
+
+            /**
+             * Value must be {@link #WAITING},{@link #SUCCESS},{@link #FAILED}
+             *
+             * @param key
+             * @param value
+             * @return
+             */
+            @Override
+            public Integer put(String key, Integer value) {
+                if (value < WAITING || value > FAILED) {
+                    throw new IllegalArgumentException("Invalid value -> " + value);
+                }
+                Integer result = super.put(key, value);
+                onDataChanged();
+                return result;
+            }
+
+
+            void onDataChanged() {
+                int waiting = 0;
+                int success = 0;
+                for (Integer value : values()) {
+                    if (value == WAITING) {
+                        waiting++;
+                    } else if (value == SUCCESS) {
+                        success++;
+                    }
+                }
+                waitingCount = waiting;
+                successCount = success;
+            }
+
+            /**
+             * Is all urls result back.
+             *
+             * @return
+             */
+            boolean isAllFinished() {
+                return waitingCount == 0;
+            }
+
+            /**
+             * Is all urls download success.
+             *
+             * @return
+             */
+            boolean isAllSuccess() {
+                return successCount == size();
+            }
+        }
+
+
+        /**
+         * Retry Robot
+         */
+        private final class RetryRobot implements Runnable {
+
+            final int MAX_RETRY_COUNT = 3;
+
+            int mRetryCounter = MAX_RETRY_COUNT;
+            final long TimeOut = 30 * 1000;
+            boolean mCanceled = false;
+
+            final Handler mInternalHandler = new Handler();
+
+            @Override
+            public void run() {
+                if (mCanceled) {
+                    return;
+                }
+                retry();
+            }
+
+            void start() {
+                mInternalHandler.removeCallbacks(this);
+                mInternalHandler.postDelayed(this, TimeOut);
+                mCanceled = false;
+            }
+
+            void cancel() {
+                mInternalHandler.removeCallbacks(this);
+                mCanceled = true;
+            }
+
+            boolean retry() {
+                mInternalHandler.removeCallbacks(this);
+                if (!isAllDownloaded()) {
+                    //retry
+                    if (mRetryCounter-- > 0) {
+                        Log.e(TAG, "starting the " + (MAX_RETRY_COUNT - mRetryCounter) + "st retry !");
+                        BitmapsDownloadTask.this.start();
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+        }
+
         public BitmapsDownloadTask(GraffitiView.IBitmapProvider bitmapCache, List<String> urls) {
             mBitmapManager = bitmapCache;
-            mUrls = new ArrayList<>(urls);
-            mCompleteCounter = urls.size();
-            Log.e(TAG, "mUrls -> " + mUrls + " mCompleteCounter -> " + mCompleteCounter);
+            mRetryRobot = new RetryRobot();
+            mUrls.clear();
+            for (String url : urls) {
+                mUrls.put(url, WAITING);
+            }
+            Log.e(TAG, "mUrls -> " + mUrls);
         }
 
         public void addListener(IBitmapDownloader.IBitmapDownloadListener listener) {
@@ -113,6 +223,9 @@ public class SimpleGraffitiBitmapProvider implements GraffitiView.IBitmapProvide
 
         @Override
         public void onStart(String url) {
+            if (isFinished()) {
+                return;
+            }
             for (IBitmapDownloader.IBitmapDownloadListener listener : mListeners) {
                 if (listener != null) {
                     listener.onStart(url);
@@ -122,31 +235,40 @@ public class SimpleGraffitiBitmapProvider implements GraffitiView.IBitmapProvide
 
         @Override
         public void onComplete(String url, Bitmap bitmap, Throwable e) {
+            if (isFinished()) {
+                return;
+            }
             for (IBitmapDownloader.IBitmapDownloadListener listener : mListeners) {
                 if (listener != null) {
                     listener.onComplete(url, bitmap, e);
                 }
             }
-            //complete counter
-            mCompleteCounter--;
+            mUrls.put(url, bitmap != null ? SUCCESS : FAILED);
 
-            if (bitmap != null) {
-                mUrls.remove(url);
-            }
-
-            if (mCompleteCounter == 0) {
+            if (mUrls.isAllFinished()) {
                 if (isAllDownloaded()) {
                     mLastException = null;
                 } else {
                     //error when
                     StringBuilder stringBuilder = new StringBuilder();
                     stringBuilder.append("The flowing urls can not be downloaded:\n");
-                    for (String value : mUrls) {
-                        stringBuilder.append(value);
-                        stringBuilder.append("\n");
+                    for (String value : mUrls.keySet()) {
+                        int status = mUrls.get(value);
+                        if (status == FAILED) {
+                            stringBuilder.append(value);
+                            stringBuilder.append("\n");
+                        }
                     }
                     mLastException = new NetworkErrorException(stringBuilder.toString());
                 }
+
+
+                //debug
+                mLastException = new Exception("DEBUG");
+                for (String value : mUrls.keySet()) {
+                    mUrls.put(value, FAILED);
+                }
+
                 onComplete(mLastException);
             }
         }
@@ -154,17 +276,24 @@ public class SimpleGraffitiBitmapProvider implements GraffitiView.IBitmapProvide
         @Override
         public void onComplete(Throwable e) {
             Log.e(TAG, "Finally download all e -> " + e);
+            if (isFinished()) {
+                return;
+            }
+
             for (IBitmapDownloader.IBitmapDownloadListener listener : mListeners) {
                 if (listener != null) {
                     listener.onComplete(e);
                 }
             }
 
-            if (e != null && mRetryCounter > 0 && mBitmapManager != null) {
+            if (e != null) {
                 Log.e(TAG, "Failure checked, retry ...");
-                start();
-                mRetryCounter--;
-                return;
+                if (mRetryRobot.retry()) {
+                    Log.e(TAG, "Retry Success.");
+                    return;
+                } else {
+                    Log.e(TAG, "Retry Failed.");
+                }
             }
 
             //stopAndClear all listeners
@@ -176,10 +305,15 @@ public class SimpleGraffitiBitmapProvider implements GraffitiView.IBitmapProvide
          */
         public void start() {
             Log.v(TAG, "start");
-            if (mBitmapManager != null) {
-                for (String url : mUrls) {
-                    download(url, BitmapsDownloadTask.this);
+            if (!isFinished()) {
+                for (String url : mUrls.keySet()) {
+                    int status = mUrls.get(url);
+                    if (status != SUCCESS) {
+                        mUrls.put(url, WAITING);
+                        download(url, BitmapsDownloadTask.this);
+                    }
                 }
+                mRetryRobot.start();
             }
         }
 
@@ -189,9 +323,9 @@ public class SimpleGraffitiBitmapProvider implements GraffitiView.IBitmapProvide
         public void stopAndClear() {
             mListeners.clear();
             mListeners = null;
-            mRetryCounter = 0;
-            mCompleteCounter = 0;
             mBitmapManager = null;
+            mRetryRobot.cancel();
+            mRetryRobot = null;
         }
 
         /**
@@ -200,7 +334,7 @@ public class SimpleGraffitiBitmapProvider implements GraffitiView.IBitmapProvide
          * @return
          */
         public boolean isAllDownloaded() {
-            return mUrls.size() == 0;
+            return mUrls.isAllSuccess();
         }
 
         /**
@@ -209,7 +343,7 @@ public class SimpleGraffitiBitmapProvider implements GraffitiView.IBitmapProvide
          * @return
          */
         public boolean isFinished() {
-            return mCompleteCounter == 0 || mBitmapManager == null || mListeners == null;
+            return mBitmapManager == null || mListeners == null || mRetryRobot == null;
         }
     }
 
@@ -352,7 +486,7 @@ public class SimpleGraffitiBitmapProvider implements GraffitiView.IBitmapProvide
         }
 
         if (mBitmapsDownloadTask != null) {
-            Log.e(TAG, "LoadsBitmapTask already in flight. isAllDownloaded -> " + mBitmapsDownloadTask.isAllDownloaded());
+            Log.e(TAG, "LoadsBitmapTask already in flight. isAllFinished -> " + mBitmapsDownloadTask.isAllDownloaded());
             if (mBitmapsDownloadTask.isFinished()) {
                 listener.onComplete(mBitmapsDownloadTask.mLastException);
             } else {
