@@ -100,8 +100,8 @@ public class DemoGraffitiBitmapProvider implements GraffitiView.IBitmapProvider 
          */
         private final class InternalMap extends HashMap<String, Integer> {
 
-            int mWaitingCount = 0;
-            int mSuccessCount = 0;
+            private int mWaitingCount = 0;
+            private int mSuccessCount = 0;
 
             /**
              * Value must be {@link #WAITING},{@link #SUCCESS},{@link #FAILED}
@@ -140,6 +140,14 @@ public class DemoGraffitiBitmapProvider implements GraffitiView.IBitmapProvider 
                 }
                 mWaitingCount = waiting;
                 mSuccessCount = success;
+            }
+
+            public int getWaitingCount() {
+                return mWaitingCount;
+            }
+
+            public int getSuccessCount() {
+                return mSuccessCount;
             }
         }
 
@@ -233,7 +241,7 @@ public class DemoGraffitiBitmapProvider implements GraffitiView.IBitmapProvider 
             }
             mUrlsMap.put(url, bitmap != null ? SUCCESS : FAILED);
 
-            if (mUrlsMap.mWaitingCount == 0) {
+            if (mUrlsMap.getWaitingCount() == 0) {
                 if (isAllDownloaded()) {
                     mLastException = null;
                 } else {
@@ -315,7 +323,7 @@ public class DemoGraffitiBitmapProvider implements GraffitiView.IBitmapProvider 
          * @return
          */
         public boolean isAllDownloaded() {
-            return mUrlsMap.mSuccessCount == mUrlsMap.size();
+            return mUrlsMap.getSuccessCount() == mUrlsMap.size();
         }
 
         /**
