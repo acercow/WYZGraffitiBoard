@@ -28,7 +28,7 @@ public class GraffitiBean implements Serializable {
     private static final Gson GSON = new Gson();
 
     @SerializedName("node")
-    private List<GraffitiLayerBean> mLayers;
+    public List<GraffitiLayerBean> mLayers;
 
     /**
      * 预留
@@ -36,22 +36,22 @@ public class GraffitiBean implements Serializable {
      * type:0; 图层类型，目前只有0，手绘
      */
     @SerializedName("type")
-    private int type = 0;
+    public int type = 0;
 
     /**
      * ios需要 对应的画布宽度
      */
     @SerializedName("width")
-    private float drawDeviceWidth = ReferenceCanvasWidth; //图层宽度
+    public float drawDeviceWidth = ReferenceCanvasWidth; //图层宽度
 
     /**
      * ios需要 对应的画布高度
      */
     @SerializedName("height")
-    private float drawDeviceHeight = ReferenceCanvasHeight; //图层高度
+    public float drawDeviceHeight = ReferenceCanvasHeight; //图层高度
 
 
-    private transient int maxNoteNumber;
+    public transient int maxNoteNumber;
 
     /**
      * {@link GraffitiLayerBean} 's reference canvas drawDeviceWidth/devices drawDeviceWidth
@@ -93,19 +93,6 @@ public class GraffitiBean implements Serializable {
 
     }
 
-    @Override
-    public String toString() {
-        return "[" +
-                "type:" + type +
-                ",ReferenceCanvasWidth:" + ReferenceCanvasWidth +
-                ",ReferenceCanvasHeight:" + ReferenceCanvasWidth +
-                ",maxNoteNumber:" + maxNoteNumber +
-                ",drawDeviceWidth:" + drawDeviceWidth +
-                ",drawDeviceHeight:" + drawDeviceHeight +
-                ",mLayers:" + mLayers +
-                "]";
-    }
-
     public GraffitiBean(GraffitiView.GraffitiData graffitiData) {
         this();
         drawDeviceWidth = graffitiData.getCanvasWidth();
@@ -144,28 +131,28 @@ public class GraffitiBean implements Serializable {
     public static class GraffitiLayerBean implements Serializable {
 
         @SerializedName("gift_id")
-        private String id = "123"; //礼物id
+        public String id = "123"; //礼物id
 
-        private transient final static float mReferenceNoteWidth = 34.0f;
+        public transient final static float mReferenceNoteWidth = 34.0f;
 
-        private transient final static float mReferenceNoteHeight = 34.0f;
+        public transient final static float mReferenceNoteHeight = 34.0f;
 
-        private transient final static float mReferenceNoteDistance = 33.0f;
+        public transient final static float mReferenceNoteDistance = 33.0f;
 
         @SerializedName("url")
-        private String mNoteDrawableRes;
+        public String mNoteDrawableRes;
 
-        private transient final static int mAnimation = 4;
+        public transient final static int mAnimation = 4;
 
-        private transient final static int mAnimationDuration = 80;
+        public transient final static int mAnimationDuration = 80;
 
         @SerializedName("points")
-        private List<GraffitiNoteBean> mNotes;
+        public List<GraffitiNoteBean> mNotes;
 
         /**
          * Gift Bean
          */
-        private transient int mGoldCoin; //用户购买小咖币数量
+        public transient int mGoldCoin; //用户购买小咖币数量
 
         public GraffitiLayerBean() {
 
@@ -189,21 +176,6 @@ public class GraffitiBean implements Serializable {
             }
         }
 
-        public String getId() {
-            return id;
-        }
-
-        public float getPercentageNoteWidth() {
-            return mReferenceNoteWidth;
-        }
-
-        public float getPercentageNoteHeight() {
-            return mReferenceNoteHeight;
-        }
-
-        public float getPercentageNoteDistance() {
-            return mReferenceNoteDistance;
-        }
 
         private String getNoteDrawableRes() {
             if (mNoteDrawableRes == null) {
@@ -217,61 +189,16 @@ public class GraffitiBean implements Serializable {
             return getNoteDrawableRes();
         }
 
-        public List<GraffitiNoteBean> getNotes() {
-            return mNotes;
-        }
-
-        public int getAnimation() {
-            return mAnimation;
-        }
-
-        public long getAnimationDuration() {
-            return mAnimationDuration;
-        }
-
-        public void setId(String id) {
-            this.id = id;
-        }
-
-        public void setNoteDrawableRes(String noteDrawableRes) {
-            this.mNoteDrawableRes = noteDrawableRes;
-        }
-
-        public void setNotes(List<GraffitiNoteBean> notes) {
-            this.mNotes = notes;
-        }
-
-        public int getGoldCoin() {
-            return mGoldCoin;
-        }
-
-        public void setGoldCoin(int goldcoin) {
-            this.mGoldCoin = goldcoin;
-        }
 
         @Override
         public boolean equals(Object obj) {
             if (obj instanceof GraffitiBean.GraffitiLayerBean) {
-                if (!TextUtils.isEmpty(id) && id.equals(((GraffitiBean.GraffitiLayerBean) obj).getId())) {
+                if (!TextUtils.isEmpty(id) && id.equals(((GraffitiLayerBean) obj).id)) {
                     return true;
                 }
             }
             return super.equals(obj);
         }
-
-        @Override
-        public String toString() {
-            return "[" +
-                    "id:" + id +
-                    ",mReferenceNoteWidth:" + mReferenceNoteWidth +
-                    ",mReferenceNoteHeight:" + mReferenceNoteHeight +
-                    ",mReferenceNoteDistance:" + mReferenceNoteDistance +
-                    ",mNoteDrawableRes:" + mNoteDrawableRes +
-                    ",mAnimation:" + mAnimation +
-                    ",mNotes:" + mNotes +
-                    "]";
-        }
-
 
         public static final List<String> mTestUrls = new ArrayList<>();
 
@@ -291,11 +218,17 @@ public class GraffitiBean implements Serializable {
 
         public class GraffitiNoteBean implements Serializable {
 
+            /**
+             * DEVICE descriptions. See {@link GraffitiView} 's doc.
+             */
             @SerializedName("x")
-            private float mDeviceX;
+            public float mDeviceX;
 
+            /**
+             * DEVICE descriptions. See {@link GraffitiView} 's doc.
+             */
             @SerializedName("y")
-            private float mDeviceY;
+            public float mDeviceY;
 
             public GraffitiNoteBean() {
                 // do nothing by default
@@ -309,25 +242,6 @@ public class GraffitiBean implements Serializable {
                 // convert values
                 mDeviceX = noteData.getCoordinateConverter().convertWidthPixelToTarget(mDeviceX);
                 mDeviceY = noteData.getCoordinateConverter().convertHeightPixelToTarget(mDeviceY);
-            }
-
-
-            /**
-             * DEVICE descriptions. See {@link GraffitiView} 's doc.
-             *
-             * @return device x
-             */
-            public float getDeviceX() {
-                return mDeviceX;
-            }
-
-            /**
-             * DEVICE descriptions. See {@link GraffitiView} 's doc.
-             *
-             * @return device y
-             */
-            public float getDeviceY() {
-                return mDeviceY;
             }
         }
     }

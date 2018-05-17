@@ -810,7 +810,11 @@ public class GraffitiView extends ViewGroup {
                         layerData = new GraffitiLayerData(bean);
                         addLayer(layerData);
                     } else {
-                        layerData.getGraffitiLayerBean().getNotes().addAll(bean.getNotes());
+                        if (layerData.getGraffitiLayerBean().mNotes != null) {
+                            layerData.getGraffitiLayerBean().mNotes.addAll(bean.mNotes);
+                        } else {
+                            layerData.getGraffitiLayerBean().mNotes = bean.mNotes;
+                        }
                     }
                 }
             }
@@ -1128,9 +1132,9 @@ public class GraffitiView extends ViewGroup {
                 mLayerBean = layerBean;
 
                 //install view like GraffitiView#installView()
-                mNoteWidth = GraffitiData.this.mReferenceCoordinateConverter.convertWidthTargetToPixel(mLayerBean.getPercentageNoteWidth());
-                mNoteHeight = GraffitiData.this.mReferenceCoordinateConverter.convertHeightTargetToPixel(mLayerBean.getPercentageNoteHeight());
-                mNoteDistance = GraffitiData.this.mReferenceCoordinateConverter.convertHeightTargetToPixel(mLayerBean.getPercentageNoteDistance());
+                mNoteWidth = GraffitiData.this.mReferenceCoordinateConverter.convertWidthTargetToPixel(mLayerBean.mReferenceNoteWidth);
+                mNoteHeight = GraffitiData.this.mReferenceCoordinateConverter.convertHeightTargetToPixel(mLayerBean.mReferenceNoteHeight);
+                mNoteDistance = GraffitiData.this.mReferenceCoordinateConverter.convertHeightTargetToPixel(mLayerBean.mReferenceNoteDistance);
 
                 //install notes if needed
                 if (isReadMode()) {
@@ -1145,13 +1149,13 @@ public class GraffitiView extends ViewGroup {
              * Install notes
              */
             private void installNotes() {
-                if (mLayerBean.getNotes() != null && mLayerBean.getNotes().size() > 0) {
+                if (mLayerBean.mNotes != null && mLayerBean.mNotes.size() > 0) {
                     if (mDeviceCoordinateConverter == null) {
                         throw new IllegalStateException("How could mDeviceCoordinateConverter be null? Can not get pixel values from beans");
                     }
                     ICoordinateConverter noteConverter = mDeviceCoordinateConverter;
-                    for (GraffitiBean.GraffitiLayerBean.GraffitiNoteBean noteBean : mLayerBean.getNotes()) {
-                        GraffitiNoteData noteData = new GraffitiNoteData(noteConverter.convertWidthTargetToPixel(noteBean.getDeviceX()), noteConverter.convertHeightTargetToPixel(noteBean.getDeviceY()));
+                    for (GraffitiBean.GraffitiLayerBean.GraffitiNoteBean noteBean : mLayerBean.mNotes) {
+                        GraffitiNoteData noteData = new GraffitiNoteData(noteConverter.convertWidthTargetToPixel(noteBean.mDeviceX), noteConverter.convertHeightTargetToPixel(noteBean.mDeviceY));
                         addNote(noteData);
                     }
                 }
@@ -1221,7 +1225,7 @@ public class GraffitiView extends ViewGroup {
                 } else if (mBitmaps != null && mBitmaps.length > 0) {
                     int frameIndex = 0;
                     if (timeLine > 0) {
-                        frameIndex = (int) (timeLine / (getGraffitiLayerBean().getAnimationDuration() / mBitmaps.length));
+                        frameIndex = (int) (timeLine / (getAnimationDuration() / mBitmaps.length));
                         frameIndex %= mBitmaps.length;
                     }
                     return mBitmaps[frameIndex];
@@ -1267,7 +1271,7 @@ public class GraffitiView extends ViewGroup {
              * @return
              */
             public boolean isHasAnimation() {
-                return mLayerBean.getAnimation() > 0;
+                return mLayerBean.mAnimation > 0;
             }
 
             /**
@@ -1276,7 +1280,7 @@ public class GraffitiView extends ViewGroup {
              * @return
              */
             public long getAnimationDuration() {
-                return mLayerBean.getAnimationDuration();
+                return mLayerBean.mAnimationDuration;
             }
 
             /**
@@ -1575,7 +1579,7 @@ public class GraffitiView extends ViewGroup {
         static final Matrix MATRIX = new Matrix();
 
         public static GraffitiAnimator create(GraffitiData.GraffitiLayerData data, Runnable updateViewRunnable) {
-            switch (data.getGraffitiLayerBean().getAnimation()) {
+            switch (data.getGraffitiLayerBean().mAnimation) {
                 case SCALE:
                     return new ScaleAnimator(data, updateViewRunnable, data.getAnimationDuration(), 1.0f, 0.5f);
                 case FRAME:
