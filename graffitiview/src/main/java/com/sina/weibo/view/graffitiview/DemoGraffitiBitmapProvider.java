@@ -352,13 +352,15 @@ public class DemoGraffitiBitmapProvider implements GraffitiView.IBitmapProvider 
     }
 
     @Override
-    public Object getBitmap(final String id) {
+    public Object getBitmap(final int id) {
         Log.v(TAG, "getBitmap url -> " + id);
-        if (TextUtils.isEmpty(id)) {
+        if (id == 0) {
             return null;
         }
+        //TODO 需要把id转为url
+        String url = "https://alcdn.img.xiaoka.tv/20180315/25f/de5/0/25fde524fdc897b572691ea9d9375367.png";
 
-        Bitmap cache = mCaches.get(id);
+        Bitmap cache = mCaches.get(url);
         if (cache != null) {
             return cache;
         }
@@ -370,7 +372,7 @@ public class DemoGraffitiBitmapProvider implements GraffitiView.IBitmapProvider 
 //        }
 
 
-        download(id, null);
+        download(url, null);
         return null;
     }
 

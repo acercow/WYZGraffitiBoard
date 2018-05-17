@@ -260,7 +260,7 @@ public class GraffitiView extends ViewGroup {
                 return true;
             }
 
-            if (!mGraffitiData.isBitmapReady(getCurrentDrawObject().getNoteBitmapId())) {
+            if (!mGraffitiData.isBitmapReady(getCurrentDrawObject().id)) {
                 Log.e(TAG, "GraffitiLayerBean's resources is not ready, can not draw.");
                 mInternalCallback.onMessage(ICallback.MSG_BITMAP_NOT_READY);
                 return true;
@@ -920,7 +920,7 @@ public class GraffitiView extends ViewGroup {
          *
          * @return
          */
-        public boolean isBitmapReady(String id) {
+        public boolean isBitmapReady(int id) {
             return mBitmapProvider.getBitmap(id) != null;
         }
 
@@ -933,12 +933,12 @@ public class GraffitiView extends ViewGroup {
          *
          * @return
          */
-        public boolean isBitmapsReady(List<String> ids) {
+        public boolean isBitmapsReady(List<Integer> ids) {
             if (ids == null) {
                 return false;
             }
-            for (String url : ids) {
-                if (!isBitmapReady(url)) {
+            for (int id : ids) {
+                if (!isBitmapReady(id)) {
                     return false;
                 }
             }
@@ -1049,11 +1049,11 @@ public class GraffitiView extends ViewGroup {
          *
          * @return
          */
-        public List<String> getLayerNoteBitmapIds() {
+        public List<Integer> getLayerNoteBitmapIds() {
             if (mLayers != null && mLayers.size() > 0) {
-                List<String> list = new ArrayList<>();
+                List<Integer> list = new ArrayList<>();
                 for (GraffitiLayerData layerData : mLayers) {
-                    String id = layerData.getNoteBitmapId();
+                    int id = layerData.getNoteBitmapId();
                     if (!list.contains(id)) {
                         list.add(id);
                     }
@@ -1216,8 +1216,8 @@ public class GraffitiView extends ViewGroup {
                 return mNoteDistance;
             }
 
-            public String getNoteBitmapId() {
-                return mLayerBean.getNoteBitmapId();
+            public int getNoteBitmapId() {
+                return mLayerBean.id;
             }
 
             /**
@@ -1900,7 +1900,7 @@ public class GraffitiView extends ViewGroup {
          * @param id id of this layer. See {@link GraffitiData.GraffitiLayerData#getNoteBitmapId()}
          * @return Bitmap if only one bitmap; Bitmap[] if FrameAnimation like bitmaps
          */
-        Object getBitmap(String id);
+        Object getBitmap(int id);
 
         /**
          * Have we all bitmaps ready or not.

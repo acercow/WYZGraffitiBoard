@@ -1,7 +1,5 @@
 package com.sina.weibo.view.graffitiview;
 
-import android.text.TextUtils;
-
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 
@@ -131,7 +129,14 @@ public class GraffitiBean implements Serializable {
     public static class GraffitiLayerBean implements Serializable {
 
         @SerializedName("gift_id")
-        public String id = "123"; //礼物id
+        public int id = 123; //礼物id
+
+        @SerializedName("points")
+        public List<GraffitiNoteBean> mNotes;
+
+        public transient String mNoteDrawableRes;
+
+        public transient int mGoldCoin; //用户购买小咖币数量
 
         public transient final static float mReferenceNoteWidth = 34.0f;
 
@@ -139,20 +144,9 @@ public class GraffitiBean implements Serializable {
 
         public transient final static float mReferenceNoteDistance = 33.0f;
 
-        @SerializedName("url")
-        public String mNoteDrawableRes;
-
         public transient final static int mAnimation = 6;
 
         public transient final static int mAnimationDuration = 80;
-
-        @SerializedName("points")
-        public List<GraffitiNoteBean> mNotes;
-
-        /**
-         * Gift Bean
-         */
-        public transient int mGoldCoin; //用户购买小咖币数量
 
         public GraffitiLayerBean() {
 
@@ -167,8 +161,6 @@ public class GraffitiBean implements Serializable {
             this();
             GraffitiBean.GraffitiLayerBean bean = layerData.getGraffitiLayerBean();
             id = bean.id;
-            mNoteDrawableRes = bean.mNoteDrawableRes;
-            mGoldCoin = bean.mGoldCoin;
             mNotes = new ArrayList<>();
             for (GraffitiView.GraffitiData.GraffitiLayerData.GraffitiNoteData noteData : layerData.getNotes()) {
                 GraffitiBean.GraffitiLayerBean.GraffitiNoteBean b = new GraffitiBean.GraffitiLayerBean.GraffitiNoteBean(noteData);
@@ -176,24 +168,10 @@ public class GraffitiBean implements Serializable {
             }
         }
 
-
-        private String getNoteDrawableRes() {
-            if (mNoteDrawableRes == null) {
-                int p = (int) (System.currentTimeMillis() % 2);
-                mNoteDrawableRes = mTestUrls.get(p);
-            }
-            return mNoteDrawableRes;
-        }
-
-        public String getNoteBitmapId() {
-            return getNoteDrawableRes();
-        }
-
-
         @Override
         public boolean equals(Object obj) {
             if (obj instanceof GraffitiBean.GraffitiLayerBean) {
-                if (!TextUtils.isEmpty(id) && id.equals(((GraffitiLayerBean) obj).id)) {
+                if (id == ((GraffitiLayerBean) obj).id) {
                     return true;
                 }
             }
@@ -210,8 +188,7 @@ public class GraffitiBean implements Serializable {
         public static GraffitiBean.GraffitiLayerBean buildTest() {
             GraffitiBean.GraffitiLayerBean bean = new GraffitiBean.GraffitiLayerBean();
             int p = (int) (System.currentTimeMillis() % 2);
-            bean.mNoteDrawableRes = mTestUrls.get(p);
-            bean.id = String.valueOf(p);
+            bean.id = p;
             return bean;
         }
 
