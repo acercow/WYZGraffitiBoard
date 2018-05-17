@@ -1131,10 +1131,7 @@ public class GraffitiView extends ViewGroup {
                 }
                 mLayerBean = layerBean;
 
-                //install view like GraffitiView#installView()
-                mNoteWidth = GraffitiData.this.mReferenceCoordinateConverter.convertWidthTargetToPixel(mLayerBean.mReferenceNoteWidth);
-                mNoteHeight = GraffitiData.this.mReferenceCoordinateConverter.convertHeightTargetToPixel(mLayerBean.mReferenceNoteHeight);
-                mNoteDistance = GraffitiData.this.mReferenceCoordinateConverter.convertHeightTargetToPixel(mLayerBean.mReferenceNoteDistance);
+                installView();
 
                 //install notes if needed
                 if (isReadMode()) {
@@ -1143,6 +1140,27 @@ public class GraffitiView extends ViewGroup {
 
                 //init in the first place
                 getNoteBitmap(-1);
+            }
+
+
+            /**
+             * Install view
+             */
+            private void installView() {
+                //install view like GraffitiView#installView()
+                mNoteWidth = GraffitiData.this.mReferenceCoordinateConverter.convertWidthTargetToPixel(mLayerBean.mReferenceNoteWidth);
+                mNoteHeight = GraffitiData.this.mReferenceCoordinateConverter.convertHeightTargetToPixel(mLayerBean.mReferenceNoteHeight);
+                mNoteDistance = GraffitiData.this.mReferenceCoordinateConverter.convertHeightTargetToPixel(mLayerBean.mReferenceNoteDistance);
+            }
+
+
+            /**
+             * Is view installed or not
+             *
+             * @return
+             */
+            public boolean isViewInstalled() {
+                return mNoteWidth > 0 && mNoteHeight > 0;
             }
 
             /**
