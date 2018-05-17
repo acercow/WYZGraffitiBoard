@@ -294,22 +294,26 @@ public class DemoGraffitiBitmapProvider implements GraffitiView.IBitmapProvider 
          */
         public void start() {
             Log.v(TAG, "start");
-            if (!isFinished()) {
-                for (String url : mUrlsMap.keySet()) {
-                    int status = mUrlsMap.get(url);
-                    if (status != SUCCESS) {
-                        mUrlsMap.put(url, WAITING);
-                        download(url, BitmapsDownloadTask.this);
-                    }
-                }
-                mRetryRobot.start();
+            if (isFinished()) {
+                return;
             }
+            for (String url : mUrlsMap.keySet()) {
+                int status = mUrlsMap.get(url);
+                if (status != SUCCESS) {
+                    mUrlsMap.put(url, WAITING);
+                    download(url, BitmapsDownloadTask.this);
+                }
+            }
+            mRetryRobot.start();
         }
 
         /**
          * Stop and clear task
          */
         public void stopAndClear() {
+            if (isFinished()) {
+                return;
+            }
             mListeners.clear();
             mListeners = null;
             mBitmapManager = null;
