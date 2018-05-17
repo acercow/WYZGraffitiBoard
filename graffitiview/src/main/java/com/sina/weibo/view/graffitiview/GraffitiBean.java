@@ -142,7 +142,7 @@ public class GraffitiBean implements Serializable {
         @SerializedName("url")
         public String mNoteDrawableRes;
 
-        public transient final static int mAnimation = 4;
+        public transient final static int mAnimation = 6;
 
         public transient final static int mAnimationDuration = 80;
 

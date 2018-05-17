@@ -85,7 +85,7 @@ public class DemoGraffitiBitmapProvider implements GraffitiView.IBitmapProvider 
 
         List<IBitmapDownloader.IBitmapDownloadListener> mListeners = new ArrayList<>();
 
-        final InternalMap mUrls = new InternalMap();
+        final InternalMap mUrlsMap = new InternalMap();
         RetryRobot mRetryRobot;
 
         GraffitiView.IBitmapProvider mBitmapManager;
@@ -100,8 +100,8 @@ public class DemoGraffitiBitmapProvider implements GraffitiView.IBitmapProvider 
          */
         private final class InternalMap extends HashMap<String, Integer> {
 
-            int waitingCount = 0;
-            int successCount = 0;
+            int mWaitingCount = 0;
+            int mSuccessCount = 0;
 
             /**
              * Value must be {@link #WAITING},{@link #SUCCESS},{@link #FAILED}
@@ -121,6 +121,13 @@ public class DemoGraffitiBitmapProvider implements GraffitiView.IBitmapProvider 
             }
 
 
+            @Override
+            public void clear() {
+                super.clear();
+                onDataChanged();
+            }
+
+
             void onDataChanged() {
                 int waiting = 0;
                 int success = 0;
@@ -131,26 +138,8 @@ public class DemoGraffitiBitmapProvider implements GraffitiView.IBitmapProvider 
                         success++;
                     }
                 }
-                waitingCount = waiting;
-                successCount = success;
-            }
-
-            /**
-             * Is all urls result back.
-             *
-             * @return
-             */
-            boolean isAllFinished() {
-                return waitingCount == 0;
-            }
-
-            /**
-             * Is all urls download success.
-             *
-             * @return
-             */
-            boolean isAllSuccess() {
-                return successCount == size();
+                mWaitingCount = waiting;
+                mSuccessCount = success;
             }
         }
 
@@ -199,17 +188,16 @@ public class DemoGraffitiBitmapProvider implements GraffitiView.IBitmapProvider 
                 }
                 return false;
             }
-
         }
 
         public BitmapsDownloadTask(GraffitiView.IBitmapProvider bitmapCache, List<String> urls) {
             mBitmapManager = bitmapCache;
             mRetryRobot = new RetryRobot();
-            mUrls.clear();
+            mUrlsMap.clear();
             for (String url : urls) {
-                mUrls.put(url, WAITING);
+                mUrlsMap.put(url, WAITING);
             }
-            Log.e(TAG, "mUrls -> " + mUrls);
+            Log.e(TAG, "mUrlsMap -> " + mUrlsMap);
         }
 
         public void addListener(IBitmapDownloader.IBitmapDownloadListener listener) {
@@ -243,17 +231,17 @@ public class DemoGraffitiBitmapProvider implements GraffitiView.IBitmapProvider 
                     listener.onComplete(url, bitmap, e);
                 }
             }
-            mUrls.put(url, bitmap != null ? SUCCESS : FAILED);
+            mUrlsMap.put(url, bitmap != null ? SUCCESS : FAILED);
 
-            if (mUrls.isAllFinished()) {
+            if (mUrlsMap.mWaitingCount == 0) {
                 if (isAllDownloaded()) {
                     mLastException = null;
                 } else {
                     //error when
                     StringBuilder stringBuilder = new StringBuilder();
                     stringBuilder.append("The flowing urls can not be downloaded:\n");
-                    for (String value : mUrls.keySet()) {
-                        int status = mUrls.get(value);
+                    for (String value : mUrlsMap.keySet()) {
+                        int status = mUrlsMap.get(value);
                         if (status == FAILED) {
                             stringBuilder.append(value);
                             stringBuilder.append("\n");
@@ -299,10 +287,10 @@ public class DemoGraffitiBitmapProvider implements GraffitiView.IBitmapProvider 
         public void start() {
             Log.v(TAG, "start");
             if (!isFinished()) {
-                for (String url : mUrls.keySet()) {
-                    int status = mUrls.get(url);
+                for (String url : mUrlsMap.keySet()) {
+                    int status = mUrlsMap.get(url);
                     if (status != SUCCESS) {
-                        mUrls.put(url, WAITING);
+                        mUrlsMap.put(url, WAITING);
                         download(url, BitmapsDownloadTask.this);
                     }
                 }
@@ -327,7 +315,7 @@ public class DemoGraffitiBitmapProvider implements GraffitiView.IBitmapProvider 
          * @return
          */
         public boolean isAllDownloaded() {
-            return mUrls.isAllSuccess();
+            return mUrlsMap.mSuccessCount == mUrlsMap.size();
         }
 
         /**
@@ -358,17 +346,16 @@ public class DemoGraffitiBitmapProvider implements GraffitiView.IBitmapProvider 
             return null;
         }
 
-//        Bitmap cache = null;
-//        cache = getCache(id);
-//        if (cache != null) {
-//            return cache;
-//        }
-
-        //return all bitmaps.
-        if (isBitmapsReady()) {
-            List<Bitmap> bitmaps = new ArrayList<>(mCaches.values());
-            return bitmaps.toArray(new Bitmap[]{});
+        Bitmap cache = mCaches.get(id);
+        if (cache != null) {
+            return cache;
         }
+
+//        //return all bitmaps.
+//        if (isBitmapsReady()) {
+//            List<Bitmap> bitmaps = new ArrayList<>(mCaches.values());
+//            return bitmaps.toArray(new Bitmap[]{});
+//        }
 
 
         download(id, null);
@@ -392,22 +379,6 @@ public class DemoGraffitiBitmapProvider implements GraffitiView.IBitmapProvider 
             return;
         }
         mCaches.put(url, bitmap);
-    }
-
-    /**
-     * Getting cache
-     *
-     * @param url
-     * @return
-     */
-    public Bitmap getCache(String url) {
-        if (TextUtils.isEmpty(url)) {
-            return null;
-        }
-        if (mCaches.containsKey(url)) {
-            return mCaches.get(url);
-        }
-        return null;
     }
 
     /**

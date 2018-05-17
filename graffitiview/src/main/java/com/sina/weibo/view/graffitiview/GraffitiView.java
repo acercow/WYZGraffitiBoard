@@ -1570,8 +1570,9 @@ public class GraffitiView extends ViewGroup {
         public final static int ALPHA = 3;
         public final static int ROTATE = 4;
         public final static int FRAME = 5;
+
         //weibo use
-        public final static int SHAKE_RETATE = 6;
+        public final static int TREMBLE = 6;
 
         /**
          * Reused MATRIX ?
@@ -1584,10 +1585,10 @@ public class GraffitiView extends ViewGroup {
                     return new ScaleAnimator(data, updateViewRunnable, data.getAnimationDuration(), 1.0f, 0.5f);
                 case FRAME:
                     return new FrameAnimator(data, updateViewRunnable, data.getAnimationDuration());
-                case ROTATE:
+                case TREMBLE:
                     return new TrembleAnimator(data, updateViewRunnable, data.getAnimationDuration());
             }
-            return new ScaleAnimator(data, updateViewRunnable, data.getAnimationDuration(), 1.0f, 0.5f);
+            return null;
         }
 
 
@@ -1854,12 +1855,6 @@ public class GraffitiView extends ViewGroup {
                 animator.setRepeatMode(ValueAnimator.REVERSE);
             }
 
-            @Override
-            protected RectF onCalculateRectF(RectF input, RectF out, float currentValue) {
-                //This is a
-                return input;
-            }
-
 
             @Override
             protected Matrix onCalculateMatrix(Matrix output, Bitmap bitmap, RectF rectF, float currentValue) {
@@ -1873,10 +1868,6 @@ public class GraffitiView extends ViewGroup {
                 return output;
             }
 
-            @Override
-            protected long onCalculateBitmapTimeLine(long duration, float currentValue) {
-                return 41;
-            }
         }
     }
 
