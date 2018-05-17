@@ -314,27 +314,25 @@ public class GraffitiView extends ViewGroup {
                 return;
             }
 
-            boolean isBitmapReady = true;
             if (!mGraffitiData.isBitmapsReady()) {
                 Log.e(TAG, "Resources is not ready, can't showLayers!");
                 mInternalCallback.onMessage(ICallback.MSG_BITMAP_NOT_READY);
-                isBitmapReady = false;
+                retry();
+                return;
             } else if (!mGraffitiData.isBitmapsReady(mGraffitiData.getLayerNoteBitmapIds())) {
                 Log.e(TAG, "Necessary resources is not ready, can't showLayers!");
                 mInternalCallback.onMessage(ICallback.MSG_BITMAP_NOT_READY);
-                isBitmapReady = false;
+                retry();
                 return;
             }
+            notifyDataChanged();
+        }
 
-            if (!isBitmapReady) {
-                // retry
-                if (retryCount > 0) {
-                    removeCallbacks(this);
-                    postDelayed(this, DELAY);
-                    retryCount--;
-                }
-            } else {
-                notifyDataChanged();
+        private void retry() {
+            if (retryCount > 0) {
+                removeCallbacks(this);
+                postDelayed(this, DELAY);
+                retryCount--;
             }
         }
 
