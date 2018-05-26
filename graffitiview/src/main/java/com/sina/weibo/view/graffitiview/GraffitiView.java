@@ -813,6 +813,7 @@ public class GraffitiView extends ViewGroup {
                         } else {
                             layerData.getGraffitiLayerBean().mNotes = bean.mNotes;
                         }
+                        layerData.installNotes();
                     }
                 }
             }
