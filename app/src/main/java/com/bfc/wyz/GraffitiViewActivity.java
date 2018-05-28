@@ -13,14 +13,11 @@ import com.facebook.common.executors.UiThreadImmediateExecutorService;
 import com.facebook.common.references.CloseableReference;
 import com.facebook.datasource.DataSource;
 import com.facebook.drawee.backends.pipeline.Fresco;
-import com.facebook.imagepipeline.core.ImagePipeline;
 import com.facebook.imagepipeline.datasource.BaseBitmapDataSubscriber;
 import com.facebook.imagepipeline.image.CloseableImage;
 import com.facebook.imagepipeline.request.ImageRequest;
 import com.nostra13.universalimageloader.core.ImageLoader;
 import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
-import com.nostra13.universalimageloader.core.assist.FailReason;
-import com.nostra13.universalimageloader.core.listener.ImageLoadingListener;
 import com.sina.weibo.view.graffitiview.DemoGraffitiBitmapProvider;
 import com.sina.weibo.view.graffitiview.GraffitiBean;
 import com.sina.weibo.view.graffitiview.GraffitiUtils;
@@ -76,15 +73,10 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
         @Override
         public void download(final String url, final IBitmapDownloadListener listener) {
 
-            final ImagePipeline imagePipeline = Fresco.getImagePipeline();
-            DataSource<CloseableReference<CloseableImage>>
-                    dataSource = imagePipeline.fetchDecodedImage(ImageRequest.fromUri(url), null);
-
             if (listener != null) {
                 listener.onStart(url);
             }
-
-            dataSource.subscribe(new BaseBitmapDataSubscriber() {
+            Fresco.getImagePipeline().fetchDecodedImage(ImageRequest.fromUri(url), null).subscribe(new BaseBitmapDataSubscriber() {
                 @Override
                 protected void onNewResultImpl(Bitmap bitmap) {
                     if (listener != null) {
