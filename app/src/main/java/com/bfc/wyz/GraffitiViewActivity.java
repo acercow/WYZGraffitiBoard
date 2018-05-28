@@ -107,8 +107,8 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
         mGraffitiView.setDrawObject(GraffitiBean.GraffitiLayerBean.buildTest());
         mGraffitiView.setCallbacks(new GraffitiView.ICallback() {
             @Override
-            public void onDataChanged(GraffitiView graffitiView, GraffitiBean.GraffitiLayerBean drawingObject) {
-                Log.e(TAG, "onDataChanged -> " + graffitiView.getGraffitiData().getCurrentNoteTotalNumber());
+            public void onDataChanged(GraffitiView graffitiView, GraffitiBean.GraffitiLayerBean drawingObject ,int noteNumber) {
+                Log.e(TAG, "onDataChanged -> " + noteNumber);
             }
 
             @Override

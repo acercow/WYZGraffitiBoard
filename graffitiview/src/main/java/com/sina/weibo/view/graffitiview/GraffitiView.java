@@ -67,7 +67,7 @@ public class GraffitiView extends ViewGroup {
             switch (msg.what) {
                 case ON_DATA_CHANGED:
                     if (mCallback != null) {
-                        mCallback.onDataChanged(GraffitiView.this, (GraffitiBean.GraffitiLayerBean) msg.obj);
+                        mCallback.onDataChanged(GraffitiView.this, (GraffitiBean.GraffitiLayerBean) msg.obj, msg.arg1);
                     }
                     break;
                 case ON_MESSAGE:
@@ -79,11 +79,12 @@ public class GraffitiView extends ViewGroup {
         }
 
         @Override
-        public void onDataChanged(GraffitiView graffitiView, GraffitiBean.GraffitiLayerBean drawingObject) {
+        public void onDataChanged(GraffitiView graffitiView, GraffitiBean.GraffitiLayerBean drawingObject, int noteNumber) {
             mGraffitiData.updateNoteTotalNumber();
             Message message = Message.obtain();
             message.what = ON_DATA_CHANGED;
             message.obj = drawingObject;
+            message.arg1 = mGraffitiData.getCurrentNoteTotalNumber();
             sendMessage(message);
         }
 
@@ -394,7 +395,7 @@ public class GraffitiView extends ViewGroup {
         post(new Runnable() {
             @Override
             public void run() {
-                mInternalCallback.onDataChanged(GraffitiView.this, null);
+                mInternalCallback.onDataChanged(GraffitiView.this, null, -1);
             }
         });
     }
@@ -423,7 +424,7 @@ public class GraffitiView extends ViewGroup {
         }
 
         if (notifyListener) {
-            mInternalCallback.onDataChanged(this, layerData.getGraffitiLayerBean());
+            mInternalCallback.onDataChanged(this, layerData.getGraffitiLayerBean(), -1);
         }
     }
 
@@ -516,11 +517,16 @@ public class GraffitiView extends ViewGroup {
         int MSG_GRAFFITI_DATA_VIEW_INSTALLED = 7;
 
         /**
+         * Called when data changed.
+         *
          * @param graffitiView  GraffitiView itself
          * @param drawingObject Current drawing object set by  {@link GraffitiView#setDrawObject(GraffitiBean.GraffitiLayerBean)}.
          *                      May be null if flush change like stopAndClear or something.
+         * @param noteNumber    Return {@link GraffitiData#getCurrentNoteTotalNumber()} when this callback triggered.
+         *                      Value of noteNumber may be different from instant calling of {@link GraffitiData#getCurrentNoteTotalNumber()} since
+         *                      handler's async mechanism.
          */
-        void onDataChanged(GraffitiView graffitiView, GraffitiBean.GraffitiLayerBean drawingObject);
+        void onDataChanged(GraffitiView graffitiView, GraffitiBean.GraffitiLayerBean drawingObject, int noteNumber);
 
 
         /**
@@ -808,12 +814,7 @@ public class GraffitiView extends ViewGroup {
                         layerData = new GraffitiLayerData(bean);
                         addLayer(layerData);
                     } else {
-                        if (layerData.getGraffitiLayerBean().mNotes != null) {
-                            layerData.getGraffitiLayerBean().mNotes.addAll(bean.mNotes);
-                        } else {
-                            layerData.getGraffitiLayerBean().mNotes = bean.mNotes;
-                        }
-                        layerData.installNotes();
+                        layerData.merge(bean);
                     }
                 }
             }
@@ -1134,7 +1135,7 @@ public class GraffitiView extends ViewGroup {
 
                 //install notes if needed
                 if (isReadMode()) {
-                    installNotes();
+                    installNotes(layerBean);
                 }
 
                 //init in the first place
@@ -1165,13 +1166,13 @@ public class GraffitiView extends ViewGroup {
             /**
              * Install notes
              */
-            private void installNotes() {
-                if (mLayerBean.mNotes != null && mLayerBean.mNotes.size() > 0) {
+            private void installNotes(GraffitiBean.GraffitiLayerBean bean) {
+                if (bean.mNotes != null && bean.mNotes.size() > 0) {
                     if (mDeviceCoordinateConverter == null) {
                         throw new IllegalStateException("How could mDeviceCoordinateConverter be null? Can not get pixel values from beans");
                     }
                     ICoordinateConverter noteConverter = mDeviceCoordinateConverter;
-                    for (GraffitiBean.GraffitiLayerBean.GraffitiNoteBean noteBean : mLayerBean.mNotes) {
+                    for (GraffitiBean.GraffitiLayerBean.GraffitiNoteBean noteBean : bean.mNotes) {
                         GraffitiNoteData noteData = new GraffitiNoteData(noteConverter.convertWidthTargetToPixel(noteBean.mDeviceX), noteConverter.convertHeightTargetToPixel(noteBean.mDeviceY));
                         addNote(noteData);
                     }
@@ -1279,7 +1280,29 @@ public class GraffitiView extends ViewGroup {
              * @return
              */
             public boolean isMergeAble(GraffitiBean.GraffitiLayerBean bean) {
-                return mLayerBean.equals(bean) && mNotes.size() < 100;
+                return bean != null && bean.mNotes != null && mLayerBean.equals(bean) && mNotes.size() < 100;
+            }
+
+
+            /**
+             * Merge {@link GraffitiBean.GraffitiLayerBean to curent}
+             *
+             * @param bean
+             */
+            public void merge(GraffitiBean.GraffitiLayerBean bean) {
+                if (isReadMode()) {
+                    if (bean != null && bean.mNotes != null) {
+                        if (mLayerBean.mNotes != null) {
+                            mLayerBean.mNotes.addAll(bean.mNotes);
+                        } else {
+                            mLayerBean.mNotes = bean.mNotes;
+                        }
+                        installNotes(bean);
+                    }
+                } else {
+                    throw new RuntimeException("GraffitiLayerData#merge(GraffitiBean.GraffitiLayerBean)" +
+                            " can only be called when inReadMode is positive.");
+                }
             }
 
             /**
@@ -1879,7 +1902,7 @@ public class GraffitiView extends ViewGroup {
 
                 output.reset();
                 output.setScale(scale, scale);
-                output.postRotate(6 * currentValue, rectF.width() / 2F, rectF.height() / 2F);
+                output.postRotate(12 * currentValue, rectF.width() / 2F, rectF.height() / 2F);
                 output.postTranslate(rectF.left, rectF.top);
 
                 return output;
