@@ -9,14 +9,22 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
+import com.facebook.common.executors.UiThreadImmediateExecutorService;
+import com.facebook.common.references.CloseableReference;
+import com.facebook.datasource.DataSource;
+import com.facebook.drawee.backends.pipeline.Fresco;
+import com.facebook.imagepipeline.core.ImagePipeline;
+import com.facebook.imagepipeline.datasource.BaseBitmapDataSubscriber;
+import com.facebook.imagepipeline.image.CloseableImage;
+import com.facebook.imagepipeline.request.ImageRequest;
 import com.nostra13.universalimageloader.core.ImageLoader;
 import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
 import com.nostra13.universalimageloader.core.assist.FailReason;
 import com.nostra13.universalimageloader.core.listener.ImageLoadingListener;
+import com.sina.weibo.view.graffitiview.DemoGraffitiBitmapProvider;
 import com.sina.weibo.view.graffitiview.GraffitiBean;
 import com.sina.weibo.view.graffitiview.GraffitiUtils;
 import com.sina.weibo.view.graffitiview.GraffitiView;
-import com.sina.weibo.view.graffitiview.DemoGraffitiBitmapProvider;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -27,41 +35,74 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
 
     private GraffitiView mGraffitiView;
 
+//    static DemoGraffitiBitmapProvider.IBitmapDownloader mDownloader = new DemoGraffitiBitmapProvider.IBitmapDownloader() {
+//        @Override
+//        public void download(final String url, final DemoGraffitiBitmapProvider.IBitmapDownloader.IBitmapDownloadListener listener) {
+//            ImageLoader.getInstance().loadImage(url, new ImageLoadingListener() {
+//                @Override
+//                public void onLoadingStarted(String s, View view) {
+//                    if (listener != null) {
+//                        listener.onStart(url);
+//                    }
+//                }
+//
+//                @Override
+//                public void onLoadingFailed(String s, View view, FailReason failReason) {
+//                    if (listener != null) {
+//                        listener.onComplete(url, null, failReason != null ? failReason.getCause() : new Exception("onLoadingFailed"));
+//                    }
+//                }
+//
+//                @Override
+//                public void onLoadingComplete(String s, View view, Bitmap bitmap) {
+//                    if (listener != null) {
+//                        listener.onComplete(url, bitmap, bitmap != null ? null : new Exception("bitmap == null ?"));
+//                    }
+//                }
+//
+//                @Override
+//                public void onLoadingCancelled(String s, View view) {
+//                    if (listener != null) {
+//                        listener.onComplete(url, null, new Exception("onLoadingCancelled"));
+//                    }
+//                }
+//            });
+//        }
+//
+//    };
+
+
     static DemoGraffitiBitmapProvider.IBitmapDownloader mDownloader = new DemoGraffitiBitmapProvider.IBitmapDownloader() {
         @Override
-        public void download(final String url, final DemoGraffitiBitmapProvider.IBitmapDownloader.IBitmapDownloadListener listener) {
-            ImageLoader.getInstance().loadImage(url, new ImageLoadingListener() {
-                @Override
-                public void onLoadingStarted(String s, View view) {
-                    if (listener != null) {
-                        listener.onStart(url);
-                    }
-                }
+        public void download(final String url, final IBitmapDownloadListener listener) {
 
-                @Override
-                public void onLoadingFailed(String s, View view, FailReason failReason) {
-                    if (listener != null) {
-                        listener.onComplete(url, null, failReason != null ? failReason.getCause() : new Exception("onLoadingFailed"));
-                    }
-                }
+            final ImagePipeline imagePipeline = Fresco.getImagePipeline();
+            DataSource<CloseableReference<CloseableImage>>
+                    dataSource = imagePipeline.fetchDecodedImage(ImageRequest.fromUri(url), null);
 
+            if (listener != null) {
+                listener.onStart(url);
+            }
+
+            dataSource.subscribe(new BaseBitmapDataSubscriber() {
                 @Override
-                public void onLoadingComplete(String s, View view, Bitmap bitmap) {
+                protected void onNewResultImpl(Bitmap bitmap) {
                     if (listener != null) {
                         listener.onComplete(url, bitmap, bitmap != null ? null : new Exception("bitmap == null ?"));
                     }
                 }
 
                 @Override
-                public void onLoadingCancelled(String s, View view) {
+                protected void onFailureImpl(DataSource<CloseableReference<CloseableImage>> dataSource) {
                     if (listener != null) {
-                        listener.onComplete(url, null, new Exception("onLoadingCancelled"));
+                        listener.onComplete(url, null, new Exception("onFailureImpl"));
                     }
                 }
-            });
-        }
 
+            }, UiThreadImmediateExecutorService.getInstance());
+        }
     };
+
 
     static final String KEY_GRAFFITI_BEAN = "key_graffiti_bean";
 
@@ -73,6 +114,7 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
         mGraffitiView.setEnabled(false);
 
         ImageLoader.getInstance().init(ImageLoaderConfiguration.createDefault(getApplicationContext()));
+        Fresco.initialize(this);
 
         DemoGraffitiBitmapProvider.getInstance(mDownloader);
         DemoGraffitiBitmapProvider.getInstance(mDownloader).download(GraffitiBean.GraffitiLayerBean.mTestUrls, new DemoGraffitiBitmapProvider.IBitmapDownloader.IBitmapDownloadListener() {
@@ -107,7 +149,7 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
         mGraffitiView.setDrawObject(GraffitiBean.GraffitiLayerBean.buildTest());
         mGraffitiView.setCallbacks(new GraffitiView.ICallback() {
             @Override
-            public void onDataChanged(GraffitiView graffitiView, GraffitiBean.GraffitiLayerBean drawingObject ,int noteNumber) {
+            public void onDataChanged(GraffitiView graffitiView, GraffitiBean.GraffitiLayerBean drawingObject, int noteNumber) {
                 Log.e(TAG, "onDataChanged -> " + noteNumber);
             }
 

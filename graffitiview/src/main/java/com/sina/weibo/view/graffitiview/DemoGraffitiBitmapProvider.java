@@ -354,9 +354,9 @@ public class DemoGraffitiBitmapProvider implements GraffitiView.IBitmapProvider 
     @Override
     public Object getBitmap(final int id) {
         Log.v(TAG, "getBitmap url -> " + id);
-        if (id == 0) {
-            return null;
-        }
+//        if (id == 0) {
+//            return null;
+//        }
         //TODO 需要把id转为url
         String url = "https://alcdn.img.xiaoka.tv/20180315/25f/de5/0/25fde524fdc897b572691ea9d9375367.png";
 
