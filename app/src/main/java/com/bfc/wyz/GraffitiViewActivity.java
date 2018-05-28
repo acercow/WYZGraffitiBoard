@@ -32,6 +32,7 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
 
     private GraffitiView mGraffitiView;
 
+    //Demo for ImageLoader
 //    static DemoGraffitiBitmapProvider.IBitmapDownloader mDownloader = new DemoGraffitiBitmapProvider.IBitmapDownloader() {
 //        @Override
 //        public void download(final String url, final DemoGraffitiBitmapProvider.IBitmapDownloader.IBitmapDownloadListener listener) {
@@ -69,6 +70,7 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
 //    };
 
 
+    // Demo for Fresco
     static DemoGraffitiBitmapProvider.IBitmapDownloader mDownloader = new DemoGraffitiBitmapProvider.IBitmapDownloader() {
         @Override
         public void download(final String url, final IBitmapDownloadListener listener) {
