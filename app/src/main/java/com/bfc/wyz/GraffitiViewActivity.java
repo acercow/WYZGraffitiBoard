@@ -126,6 +126,8 @@ public class GraffitiViewActivity extends Activity implements View.OnClickListen
             public void onComplete(Throwable e) {
                 Log.e(TAG, "onComplete e -> " + e);
                 Toast.makeText(GraffitiViewActivity.this, "Ready to showLayers? e -> " + e, Toast.LENGTH_SHORT).show();
+
+
             }
         }, false);
 
